@@ -7,47 +7,54 @@
 ## 📌 Commit Message
 
 ```text
-feat(editor): add line bookmarks with CodeMirror 6 gutter markers, shortcuts, and UI controls
+feat: publish Scripta v1.1.4
 
-- Implement CodeMirror 6 bookmark extension:
-  - Custom GutterMarker rendering ribbon bookmark icon with accent theme styling.
-  - Position mapping via tr.changes automatically retains bookmark line references when editing text.
-  - Line decoration highlighting bookmarked rows with subtle accent background.
-  - Direct gutter click interaction to toggle bookmarks.
-- Register Bookmark commands & shortcuts:
-  - Ctrl+F2: Toggle Bookmark at cursor position.
-  - F2: Navigate to Next Bookmark.
-  - Shift+F2: Navigate to Previous Bookmark.
-  - Ctrl+Shift+F2: Clear All Bookmarks in active file.
-- UI Controls Integration:
-  - File Menu: Added Bookmarks submenu with quick actions and scrollable bookmarked lines list.
-  - Desktop Toolbar (Right Cluster): Added Bookmarks dropdown button with live count badge and jump-to-line selector.
-  - Mobile Toolbar: Added Bookmarks accordion submenu to More menu.
+- Core Architecture & Engine:
+  - Vite 8 + React 19 + TypeScript strict mode with CodeMirror 6 text editor.
+  - Multi-tab management with persistent IndexedDB session recovery, tab pinning, locking, and tab reordering.
+  - Native File System Access API integration with fallback download handlers and external file change detection.
+- Live Previews & Adapters:
+  - Real-time Markdown rendering with DOMPurify sanitization.
+  - Interactive Mermaid.js diagrams with vector SVG export.
+  - Live HTML/CSS runner, Vector SVG viewer, Image inspector, and in-browser Python (Pyodide WASM).
+- v1.1.4 Feature Additions:
+  - Line Bookmarks: CodeMirror 6 custom gutter markers, keyboard shortcuts (Ctrl+F2, F2, Shift+F2), and unified BookmarkMenuItems component.
+  - Dual-Zone Drag & Drop: Side-by-side overlay to Open as New Tab(s) or Append to Cursor without sticky hover bugs.
+  - Reopen Closed Files: Closed files stack and Recent Files Service backed by IndexedDB.
+- Scripting & Automation:
+  - Client-side Web Worker script execution engine with JSON Mode Editor, sample data runner, and macro templates.
+- Workspaces & Settings:
+  - Multi-workspace isolated session management.
+  - Comprehensive shortcut mapper, centralized command registry, encoding converter, and zero-FOUC theme presets.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. CodeMirror 6 Bookmark Extension (`src/features/editor/services/`)
-- Created [bookmarkExtension.ts](file:///g:/TextEditor/src/features/editor/services/bookmarkExtension.ts):
-  - `BookmarkGutterMarker`: Custom gutter marker with SVG bookmark icon and tooltip.
-  - `bookmarkStateField`: `StateField<RangeSet<GutterMarker>>` managing bookmark positions and mapping changes through document transactions.
-  - `bookmarkLineHighlightField`: Line decoration providing subtle row background highlight for bookmarked lines.
-  - `bookmarkGutter`: Gutter component attached next to line numbers with click event to toggle bookmarks.
-  - Navigation & inspection helpers: `toggleBookmarkAtCursor`, `jumpToNextBookmark`, `jumpToPrevBookmark`, `jumpToLine`, `clearAllBookmarks`, `getBookmarkedLines`.
-- Integrated extension into [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx).
-- Added `.cm-bookmark-gutter` and `.cm-bookmarked-line` styling in [index.css](file:///g:/TextEditor/src/index.css).
+### 1. Editor Core & Line Bookmarks (`src/features/editor/`)
 
-### 2. Command Registry & Centralized Shortcuts (`src/core/commands/`, `src/App.tsx`)
-- Added `file.toggleBookmark`, `file.nextBookmark`, `file.prevBookmark`, and `file.clearBookmarks` to `CommandId` in [types.ts](file:///g:/TextEditor/src/core/commands/types.ts).
-- Registered all 4 commands in [registry.ts](file:///g:/TextEditor/src/core/commands/registry.ts) with standard keybindings (`Ctrl+F2`, `F2`, `Shift+F2`, `Ctrl+Shift+F2`).
-- Bound commands in centralized keydown listener in [App.tsx](file:///g:/TextEditor/src/App.tsx).
+- [bookmarkExtension.ts](file:///g:/TextEditor/src/features/editor/services/bookmarkExtension.ts): Custom CodeMirror 6 gutter marker, position mapping through document changes, and line jumper helpers (`Ctrl+F2`, `F2`, `Shift+F2`).
+- [BookmarkMenuItems.tsx](file:///g:/TextEditor/src/features/editor/components/BookmarkMenuItems.tsx): Reusable, DRY menu component for bookmarks across `MenuBar` and `Toolbar`.
+- [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx): Compartmentalized CodeMirror view supporting syntax highlighting, theme switching, whitespace rendering, dynamic line numbers, and session bookmark syncing.
 
-### 3. Editor Commands Hook (`src/features/editor/hooks/useEditorCommands.ts`)
-- Exposed `toggleBookmark`, `nextBookmark`, `prevBookmark`, `clearBookmarks`, `jumpToBookmark`, and `getBookmarks` from `useEditorCommands`.
+### 2. File Operations & Dual-Zone Drag & Drop (`src/features/file-system/`, `src/features/tabs/`)
 
-### 4. UI Integration (`src/app/layout/MenuBar.tsx`, `src/features/editor/components/Toolbar.tsx`)
-- Menu Bar `[File]`: Added **Bookmarks** submenu containing toggle, next, previous, clear, and interactive list of bookmarked lines with text snippets.
-- Desktop Toolbar: Added Bookmark button in right controls cluster (beside Lock and Workspace) featuring real-time bookmark count badge and jump-to-line dropdown.
-- Mobile Toolbar: Added Bookmarks submenu within mobile More dropdown.
+- [store.ts](file:///g:/TextEditor/src/features/tabs/store.ts): Multi-tab state management with dual-zone drag handlers (`Open as New Tab` vs `Append to Active Tab`), tab pinning/locking, and debounced IndexedDB autosave.
+- [recentFilesService.ts](file:///g:/TextEditor/src/features/file-system/services/recentFilesService.ts): Recent files tracking and `reopenClosedFile` stack (`Ctrl+Shift+T`).
+- [fileSystemApi.ts](file:///g:/TextEditor/src/features/file-system/data/fileSystemApi.ts): File System Access API wrapper with graceful cross-browser fallback.
+
+### 3. Live Previews (`src/features/preview/`)
+
+- Multi-format preview adapters: Markdown, Mermaid diagrams, HTML, CSS, Vector SVG, Raster images, and Python execution via WebAssembly Pyodide.
+
+### 4. Workspaces & Script Automation (`src/features/workspace/`, `src/features/scripts/`)
+
+- Workspace switcher and session organizer in IndexedDB.
+- Script runner executing JavaScript batch transformations safely inside sandboxed Web Workers.
+
+### 5. Application Infrastructure & Distribution (`.github/`, root)
+
+- [release.yml](file:///g:/TextEditor/.github/workflows/release.yml): Automated GitHub release workflow packaging standalone `scripta-v*.zip` with SHA256 checksums and Sigstore provenance attestations.
+- [README.md](file:///g:/TextEditor/README.md): Polished project documentation with hero preview banner, feature matrix, and keyboard shortcut reference.
+- [package.json](file:///g:/TextEditor/package.json): Version 1.1.4 with Apache-2.0 license.

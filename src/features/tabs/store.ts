@@ -39,11 +39,7 @@ import {
   encodeString,
   detectEncodingFromBuffer,
 } from "../../core/utils/encodingUtils";
-import {
-  WELCOME_MD_CONTENT,
-  TERMS_MD_CONTENT,
-  POLICY_MD_CONTENT,
-} from "../../core/data/defaultDocuments";
+import { WELCOME_MD_CONTENT } from "../../core/data/defaultDocuments";
 import { applyThemeToDOM } from "../settings/services/themeService";
 
 let saveSettingsTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -159,14 +155,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
 };
 
 function createInitialTab(name = "welcome.md"): FileTab {
-  let initialContent = WELCOME_MD_CONTENT;
-  if (name === "terms.md") {
-    initialContent = TERMS_MD_CONTENT;
-  } else if (name === "policy.md") {
-    initialContent = POLICY_MD_CONTENT;
-  } else if (name !== "welcome.md") {
-    initialContent = "";
-  }
+  const initialContent = name === "welcome.md" ? WELCOME_MD_CONTENT : "";
 
   return {
     id: crypto.randomUUID(),

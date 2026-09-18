@@ -42,3 +42,5 @@ SPECIFICATION.md
 .codegraph/
 public/version.json
 .docs/
+*.bundle
+homepage/

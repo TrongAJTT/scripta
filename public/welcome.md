@@ -56,7 +56,7 @@ graph TD
 
 ### 📜 Legal & Privacy Documentation:
 
-- [Terms of Service](terms.md)
-- [Privacy Policy](policy.md)
+- [Terms of Service](https://www.trongajtt.com/apps/scripta/terms)
+- [Privacy Policy](https://www.trongajtt.com/apps/scripta/policy)
 
 _Tip: Press **Ctrl+O** to open a file from your computer or drag & drop files anywhere onto the window!_

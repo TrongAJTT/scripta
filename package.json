@@ -3,7 +3,9 @@
   "private": true,
   "version": "1.1.4",
   "description": "Scripta - Modern Hybrid Text Editor & Live Document Viewer",
+  "license": "Apache-2.0",
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
