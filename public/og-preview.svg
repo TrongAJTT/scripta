@@ -1,0 +1,313 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#0a0f1d" />
+    </linearGradient>
+
+    <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.05" />
+    </linearGradient>
+
+    <linearGradient id="windowBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <linearGradient id="emeraldBtn" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <filter id="dropGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+
+    <filter id="logoGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#10b981" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+
+  <!-- Ambient Glow Effects -->
+  <circle cx="200" cy="150" r="280" fill="url(#accentGlow)" />
+  <circle cx="1000" cy="450" r="320" fill="url(#accentGlow)" />
+
+  <!-- Subtle Blueprint Grid Pattern -->
+  <g opacity="0.06" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="90" x2="1200" y2="90" />
+    <line x1="0" y1="180" x2="1200" y2="180" />
+    <line x1="0" y1="270" x2="1200" y2="270" />
+    <line x1="0" y1="360" x2="1200" y2="360" />
+    <line x1="0" y1="450" x2="1200" y2="450" />
+    <line x1="0" y1="540" x2="1200" y2="540" />
+    <line x1="150" y1="0" x2="150" y2="630" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="450" y1="0" x2="450" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="750" y1="0" x2="750" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
+    <line x1="1050" y1="0" x2="1050" y2="630" />
+  </g>
+
+  <!-- ==================== HEADER BRANDING ==================== -->
+  <g transform="translate(60, 48)">
+    <!-- App Logo Icon -->
+    <g filter="url(#logoGlow)">
+      <rect x="0" y="0" width="48" height="48" rx="10" fill="#181825" stroke="#10b981" stroke-width="2" />
+      <!-- Mini Document Icon Lines -->
+      <path d="M14 12 L34 12" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+      <path d="M14 20 L30 20" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+      <path d="M14 28 L34 28" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" />
+      <path d="M14 36 L24 36" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Pencil Accent -->
+      <polygon points="32,32 38,26 40,28 34,34 31,35" fill="#f59e0b" />
+    </g>
+
+    <!-- App Title & Tagline -->
+    <text x="64" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="800" fill="#ffffff" letter-spacing="-0.5">Scripta</text>
+    <text x="64" y="52" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" font-size="13" font-weight="500" fill="#94a3b8">Modern Offline Hybrid Text Editor &amp; Live Document Viewer</text>
+
+    <!-- Right Badges -->
+    <g transform="translate(560, 4)">
+      <!-- Badge 1: Offline First -->
+      <rect x="0" y="0" width="150" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle cx="16" cy="17" r="4" fill="#10b981" />
+      <text x="28" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Offline-First PWA</text>
+
+      <!-- Badge 2: Live Mermaid -->
+      <rect x="162" y="0" width="180" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="178" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="12" font-weight="600" fill="#38bdf8">📊 Live Mermaid &amp; MD</text>
+
+      <!-- Badge 3: File System Access -->
+      <rect x="354" y="0" width="166" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="370" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="12" font-weight="600" fill="#a78bfa">⚡ Native File System</text>
+    </g>
+  </g>
+
+  <!-- ==================== MAIN APP WINDOW ==================== -->
+  <g transform="translate(60, 126)" filter="url(#dropGlow)">
+    <!-- Window Outer Shell -->
+    <rect width="1080" height="456" rx="10" fill="#181825" stroke="url(#windowBorder)" stroke-width="1.5" />
+
+    <!-- 1. Menubar Bar -->
+    <rect width="1080" height="34" rx="10" fill="#11111b" />
+    <rect y="24" width="1080" height="10" fill="#11111b" />
+    <line x1="0" y1="34" x2="1080" y2="34" stroke="#2a2b3d" stroke-width="1" />
+
+    <!-- Menubar Items -->
+    <g transform="translate(16, 21)" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="11" font-weight="500" fill="#9399b2">
+      <text x="0" y="0" fill="#cdd6f4">File</text>
+      <text x="35" y="0">Edit</text>
+      <text x="70" y="0">View</text>
+      <text x="110" y="0">Encoding</text>
+      <text x="172" y="0">Language</text>
+      <text x="238" y="0">Scripts</text>
+      <text x="290" y="0">Settings</text>
+      <text x="348" y="0">Help</text>
+    </g>
+
+    <!-- Version Badge on top right of Menubar -->
+    <rect x="970" y="8" width="94" height="18" rx="4" fill="#1e1e2e" stroke="#313244" stroke-width="1" />
+    <text x="982" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Inter', monospace" font-size="10" font-weight="600" fill="#10b981">Scripta v1.1.2</text>
+
+    <!-- 2. Toolbar Bar -->
+    <g transform="translate(0, 34)">
+      <rect width="1080" height="38" fill="#181825" />
+      <line x1="0" y1="38" x2="1080" y2="38" stroke="#2a2b3d" stroke-width="1" />
+
+      <!-- Tool Icons (New, Open, Save, Find, Zoom) -->
+      <g transform="translate(16, 11)">
+        <!-- New File -->
+        <rect x="0" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <path d="M7 6 H14 L17 9 V18 H7 Z" stroke="#10b981" stroke-width="1.5" fill="none" />
+
+        <!-- Open Folder -->
+        <rect x="30" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <path d="M35 16 V8 H41 L43 10 H49 V16 Z" stroke="#f59e0b" stroke-width="1.5" fill="none" />
+
+        <!-- Save -->
+        <rect x="60" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <path d="M66 6 H76 V18 H66 Z" stroke="#3b82f6" stroke-width="1.5" fill="none" />
+
+        <!-- Search -->
+        <rect x="90" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <circle cx="100" cy="11" r="4" stroke="#9399b2" stroke-width="1.5" fill="none" />
+        <line x1="103" y1="14" x2="108" y2="19" stroke="#9399b2" stroke-width="1.5" stroke-linecap="round" />
+
+        <!-- Separator -->
+        <line x1="126" y1="4" x2="126" y2="20" stroke="#313244" stroke-width="1" />
+
+        <!-- Zoom In -->
+        <rect x="138" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <circle cx="150" cy="11" r="4" stroke="#9399b2" stroke-width="1.5" fill="none" />
+        <line x1="150" y1="9" x2="150" y2="13" stroke="#10b981" stroke-width="1.5" />
+        <line x1="148" y1="11" x2="152" y2="11" stroke="#10b981" stroke-width="1.5" />
+
+        <!-- Zoom Out -->
+        <rect x="168" y="0" width="24" height="24" rx="4" fill="#1e1e2e" />
+        <circle cx="180" cy="11" r="4" stroke="#9399b2" stroke-width="1.5" fill="none" />
+        <line x1="178" y1="11" x2="182" y2="11" stroke="#ef4444" stroke-width="1.5" />
+
+        <!-- Separator -->
+        <line x1="204" y1="4" x2="204" y2="20" stroke="#313244" stroke-width="1" />
+
+        <!-- Layout Split Preview Toggle (Active) -->
+        <rect x="216" y="0" width="28" height="24" rx="4" fill="#10b981" opacity="0.15" />
+        <rect x="216" y="0" width="28" height="24" rx="4" fill="none" stroke="#10b981" stroke-width="1" />
+        <rect x="220" y="5" width="20" height="14" rx="2" fill="none" stroke="#10b981" stroke-width="1.2" />
+        <line x1="230" y1="5" x2="230" y2="19" stroke="#10b981" stroke-width="1.2" />
+      </g>
+    </g>
+
+    <!-- 3. Tabs Bar -->
+    <g transform="translate(0, 72)">
+      <rect width="1080" height="28" fill="#11111b" />
+      <line x1="0" y1="28" x2="1080" y2="28" stroke="#2a2b3d" stroke-width="1" />
+
+      <!-- Tab 1: Active welcome.md -->
+      <g transform="translate(0, 0)">
+        <rect width="150" height="28" fill="#1e1e2e" />
+        <line x1="0" y1="0" x2="150" y2="0" stroke="#10b981" stroke-width="2" />
+        <circle cx="16" cy="14" r="3" fill="#10b981" />
+        <text x="26" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="11" font-weight="600" fill="#ffffff">welcome.md</text>
+        <text x="136" y="17" font-family="'Inter', sans-serif" font-size="11" fill="#6c7086">×</text>
+      </g>
+
+      <!-- Tab 2: architecture.mermaid -->
+      <g transform="translate(151, 0)">
+        <rect width="165" height="28" fill="#181825" />
+        <text x="16" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="11" fill="#9399b2">architecture.mermaid</text>
+        <text x="150" y="17" font-family="'Inter', sans-serif" font-size="11" fill="#6c7086">×</text>
+      </g>
+
+      <!-- Tab 3: main.ts -->
+      <g transform="translate(317, 0)">
+        <rect width="110" height="28" fill="#181825" />
+        <text x="16" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="11" fill="#9399b2">main.ts</text>
+        <text x="96" y="17" font-family="'Inter', sans-serif" font-size="11" fill="#6c7086">×</text>
+      </g>
+    </g>
+
+    <!-- 4. Workspace Split Pane (Editor Left, Live Preview Right) -->
+    <g transform="translate(0, 100)">
+      <!-- LEFT PANE: CodeMirror 6 Editor -->
+      <rect width="520" height="326" fill="#181825" />
+
+      <!-- Gutter (Line Numbers) -->
+      <g transform="translate(0, 0)" fill="#45475a" font-family="'Fira Code', monospace" font-size="11" text-anchor="end">
+        <rect width="40" height="326" fill="#11111b" />
+        <line x1="40" y1="0" x2="40" y2="326" stroke="#2a2b3d" stroke-width="1" />
+        <text x="32" y="24">1</text>
+        <text x="32" y="44">2</text>
+        <text x="32" y="64">3</text>
+        <text x="32" y="84">4</text>
+        <text x="32" y="104">5</text>
+        <text x="32" y="124">6</text>
+        <text x="32" y="144">7</text>
+        <text x="32" y="164">8</text>
+        <text x="32" y="184">9</text>
+        <text x="32" y="204">10</text>
+        <text x="32" y="224">11</text>
+        <text x="32" y="244">12</text>
+        <text x="32" y="264">13</text>
+      </g>
+
+      <!-- Editor Code Content -->
+      <g transform="translate(48, 24)" font-family="'Fira Code', monospace" font-size="11.5" fill="#cdd6f4">
+        <!-- Markdown Heading -->
+        <text x="0" y="0"><tspan fill="#f38ba8">#</tspan> <tspan font-weight="700" fill="#89b4fa">Welcome to Scripta 🚀</tspan></text>
+        <text x="0" y="20" fill="#6c7086">---</text>
+        <!-- Code snippet -->
+        <text x="0" y="40"><tspan fill="#fab387">###</tspan> <tspan font-weight="600" fill="#a6e3a1">Interactive Architecture</tspan></text>
+        <text x="0" y="60" fill="#f9e2af">```mermaid</text>
+        <text x="0" y="80"><tspan fill="#cba6f7">graph</tspan> <tspan fill="#f38ba8">TD</tspan></text>
+        <text x="14" y="100"><tspan fill="#89b4fa">A</tspan>[User Opens App] <tspan fill="#10b981">--&gt;</tspan> <tspan fill="#89b4fa">B</tspan>{Choose File}</text>
+        <text x="14" y="120"><tspan fill="#89b4fa">B</tspan> <tspan fill="#10b981">--&gt;|Disk|</tspan> <tspan fill="#89b4fa">C</tspan>[File System Access API]</text>
+        <text x="14" y="140"><tspan fill="#89b4fa">B</tspan> <tspan fill="#10b981">--&gt;|New|</tspan> <tspan fill="#89b4fa">D</tspan>[Virtual Workspace]</text>
+        <text x="14" y="160"><tspan fill="#89b4fa">C</tspan> <tspan fill="#10b981">--&gt;</tspan> <tspan fill="#89b4fa">E</tspan>[CodeMirror 6 Editor]</text>
+        <text x="14" y="180"><tspan fill="#89b4fa">E</tspan> <tspan fill="#10b981">--&gt;</tspan> <tspan fill="#89b4fa">F</tspan>[Realtime Split Preview]</text>
+        <text x="0" y="200" fill="#f9e2af">```</text>
+        <text x="0" y="220"><tspan fill="#89dceb">console</tspan>.<tspan fill="#a6e3a1">log</tspan>(<tspan fill="#a6e3a1">"PWA Ready &amp; Synchronized"</tspan>);</text>
+      </g>
+
+      <!-- Center Splitter Line -->
+      <line x1="520" y1="0" x2="520" y2="326" stroke="#2a2b3d" stroke-width="2" />
+
+      <!-- RIGHT PANE: Live Markdown & Mermaid Preview -->
+      <g transform="translate(521, 0)">
+        <rect width="559" height="326" fill="#1e1e2e" />
+
+        <!-- Preview Header Bar -->
+        <rect width="559" height="28" fill="#181825" />
+        <text x="16" y="18" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#10b981">👁 LIVE DOCUMENT PREVIEW</text>
+        <rect x="470" y="5" width="76" height="18" rx="3" fill="#313244" />
+        <text x="480" y="17" font-family="'Inter', sans-serif" font-size="9.5" font-weight="600" fill="#94a3b8">MARKDOWN</text>
+        <line x1="0" y1="28" x2="559" y2="28" stroke="#2a2b3d" stroke-width="1" />
+
+        <!-- Rendered Document View -->
+        <g transform="translate(24, 48)">
+          <text x="0" y="12" font-family="'Inter', sans-serif" font-size="18" font-weight="800" fill="#ffffff">Welcome to Scripta 🚀</text>
+          <text x="0" y="34" font-family="'Inter', sans-serif" font-size="12" fill="#a6adc8">A modern PWA hybrid blending <tspan font-weight="700" fill="#10b981">high-speed performance</tspan> with interactive Live Preview.</text>
+
+          <!-- Rendered Mermaid Flowchart Box -->
+          <g transform="translate(0, 52)">
+            <rect width="510" height="184" rx="8" fill="#181825" stroke="#313244" stroke-width="1" />
+
+            <!-- Mermaid Node 1 -->
+            <rect x="40" y="24" width="130" height="36" rx="6" fill="#11111b" stroke="#10b981" stroke-width="1.5" />
+            <text x="105" y="46" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">User Opens App</text>
+
+            <!-- Arrow 1 -->
+            <path d="M170 42 L220 42" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" />
+            <polygon points="220,38 228,42 220,46" fill="#10b981" />
+
+            <!-- Mermaid Node 2 (Diamond) -->
+            <polygon points="280,18 340,42 280,66 220,42" fill="#1e1e2e" stroke="#f59e0b" stroke-width="1.5" />
+            <text x="280" y="46" font-family="'Inter', sans-serif" font-size="10.5" font-weight="600" fill="#f59e0b" text-anchor="middle">Choose File</text>
+
+            <!-- Arrow to Node 3 -->
+            <path d="M280 66 L280 106" stroke="#3b82f6" stroke-width="2" />
+            <polygon points="276,106 280,114 284,106" fill="#3b82f6" />
+
+            <!-- Mermaid Node 3 -->
+            <rect x="195" y="114" width="170" height="38" rx="6" fill="#11111b" stroke="#3b82f6" stroke-width="1.5" />
+            <text x="280" y="138" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#93c5fd" text-anchor="middle">CodeMirror 6 Editor</text>
+
+            <!-- Arrow to Node 4 -->
+            <path d="M365 133 L405 133" stroke="#a855f7" stroke-width="2" />
+            <polygon points="405,129 413,133 405,137" fill="#a855f7" />
+
+            <!-- Mermaid Node 4 -->
+            <rect x="415" y="114" width="80" height="38" rx="6" fill="#11111b" stroke="#a855f7" stroke-width="1.5" />
+            <text x="455" y="138" font-family="'Inter', sans-serif" font-size="10" font-weight="600" fill="#d8b4fe" text-anchor="middle">Split View</text>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- 5. Classic Status Bar -->
+    <g transform="translate(0, 430)">
+      <rect width="1080" height="26" rx="0" fill="#11111b" />
+      <line x1="0" y1="0" x2="1080" y2="0" stroke="#2a2b3d" stroke-width="1" />
+
+      <g transform="translate(16, 17)" font-family="'Fira Code', monospace" font-size="10" fill="#6c7086">
+        <text x="0" y="0">Ln: <tspan fill="#cdd6f4">1</tspan>  Col: <tspan fill="#cdd6f4">1</tspan></text>
+        <text x="90" y="0">Lines: <tspan fill="#cdd6f4">42</tspan></text>
+        <text x="170" y="0">Length: <tspan fill="#cdd6f4">1,480</tspan></text>
+      </g>
+
+      <g transform="translate(860, 17)" font-family="'Fira Code', monospace" font-size="10" fill="#6c7086">
+        <text x="0" y="0" fill="#10b981">✓ Saved</text>
+        <text x="60" y="0">Unix (LF)</text>
+        <text x="130" y="0">UTF-8</text>
+        <text x="180" y="0" font-weight="700" fill="#38bdf8">MARKDOWN</text>
+      </g>
+    </g>
+  </g>
+</svg>

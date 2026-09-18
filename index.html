@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=2" />
+    <link rel="apple-touch-icon" href="/icon.svg?v=2" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#181825" />
+    <title>Scripta - Text Editor &amp; Live Viewer</title>
+    <meta name="description" content="A modern, high-performance progressive web app combining lightning speed with CodeMirror 6, live Markdown, SVG, Mermaid rendering, and local File System Access API." />
+    <meta name="keywords" content="scripta, text editor, markdown preview, mermaid preview, codemirror, offline editor, web text editor, local file system, pwa" />
+    <meta name="author" content="Scripta Team" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://scripta.trongajtt.com/" />
+    <meta property="og:title" content="Scripta - Fast Text Editor &amp; Live Document Viewer" />
+    <meta property="og:description" content="A modern, high-performance progressive web app combining lightning speed with CodeMirror 6, live Markdown, SVG, Mermaid rendering, and local File System Access API." />
+    <meta property="og:image" content="/og-preview.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Scripta Interface with CodeMirror 6 and Live Markdown Mermaid Preview" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Scripta - Text Editor &amp; Markdown Viewer" />
+    <meta name="twitter:description" content="A modern, high-performance progressive web app combining lightning speed with CodeMirror 6, live Markdown, SVG, Mermaid rendering, and local File System Access API." />
+    <meta name="twitter:image" content="/og-preview.svg" />
+    <meta name="twitter:image:alt" content="Scripta Interface with CodeMirror 6 and Live Markdown Mermaid Preview" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Scripta",
+        "url": "https://scripta.trongajtt.com/",
+        "description": "A modern, high-performance progressive web app combining lightning speed with CodeMirror 6, live Markdown, SVG, Mermaid rendering, and local File System Access API.",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript. Requires HTML5.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "CodeMirror 6 Editor with Syntax Highlighting",
+          "Live Markdown, SVG, and Mermaid Diagram Preview",
+          "Native Local File System Access API",
+          "Offline-first Progressive Web App (PWA)",
+          "Custom Automation Scripting Engine with Web Workers"
+        ]
+      }
+    </script>
+
+    <!-- Preconnect & Fonts: Inter for UI & JetBrains Mono for Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Anti-FOUC Theme Script & Early PWA Install Event Capture -->
+    <script>
+      // Capture beforeinstallprompt as early as possible before any bundle scripts load
+      window.__deferredPwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__deferredPwaPrompt = e;
+      });
+
+      // Apply theme before render to prevent flash of unstyled content (FOUC)
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark) || saved === 'system' && prefersDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="h-screen w-screen overflow-hidden select-none bg-[var(--bg-app)] text-[var(--text-main)] font-sans antialiased">
+    <noscript>
+      <div style="padding: 2rem; font-family: system-ui, sans-serif; text-align: center; background-color: #111827; color: #f3f4f6; min-height: 100vh;">
+        <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem;">Scripta - Text Editor &amp; Viewer</h1>
+        <p style="font-size: 1rem; color: #9ca3af; max-width: 600px; margin: 0 auto 1.5rem auto;">
+          A lightweight, modern web text editor with live Markdown preview, Mermaid diagrams, and native local file management. Please enable JavaScript in your browser to use this application.
+        </p>
+      </div>
+    </noscript>
+    <div id="root" class="h-full w-full flex flex-col"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
