@@ -3,6 +3,7 @@ import { useEditorStore } from "../../features/tabs/store";
 import { useScriptStore } from "../../features/scripts/store/scriptStore";
 import { useWorkspaceStore } from "../../features/workspace/store/workspaceStore";
 import { WorkspaceMenuItems } from "../../features/workspace/components/WorkspaceMenuItems";
+import { WorkspaceFolderSyncMenuItems } from "../../features/workspace/components/WorkspaceFolderSyncMenuItems";
 import { ThemeMenuItems } from "../../features/settings/components/ThemeMenuItems";
 import { BookmarkMenuItems } from "../../features/editor/components/BookmarkMenuItems";
 import type { SupportedLanguage } from "../../core/types/file.types";
@@ -47,7 +48,7 @@ import {
   Clock,
   Trash2,
   Bookmark,
-  Cloud,
+  FolderGit2,
 } from "lucide-react";
 import {
   COMMON_ENCODINGS,
@@ -70,6 +71,8 @@ export interface MenuBarProps {
   onOpenAbout?: () => void;
   onOpenInstallApp?: () => void;
   onRunScript?: (script: ScriptMetadata) => void;
+  onOpenWorkspaceInfo?: () => void;
+  onOpenTabInfo?: () => void;
 }
 
 export const MenuBar: React.FC<MenuBarProps> = ({
@@ -81,6 +84,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onOpenAbout,
   onOpenInstallApp,
   onRunScript,
+  onOpenWorkspaceInfo,
+  onOpenTabInfo,
 }) => {
   const createTab = useEditorStore((s) => s.createTab);
   const openFileAction = useEditorStore((s) => s.openFileAction);
@@ -105,6 +110,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const toggleSearch = useEditorStore((s) => s.toggleSearch);
   const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
+  const previewMode = useEditorStore((s) => s.previewMode);
   const tabs = useEditorStore((s) => s.tabs);
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -200,6 +206,18 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         />
         <DropdownMenu.Separator />
 
+        {/* Tab Information */}
+        {activeTab && (
+          <DropdownMenu.Item
+            label="Tab Information..."
+            commandId="file.tabInfo"
+            icon={<Info className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+            onSelect={() => onOpenTabInfo?.()}
+          />
+        )}
+
+        <DropdownMenu.Separator />
+
         {/* Pin / Unpin Active Tab */}
         {activeTab && (
           <DropdownMenu.Item
@@ -279,17 +297,19 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           icon={<Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />}
           alignGutter
         >
-          <WorkspaceMenuItems />
+          <WorkspaceMenuItems onOpenWorkspaceInfo={onOpenWorkspaceInfo} />
         </DropdownMenu.Sub>
 
-        {/* Cloud Sync & Backup (First-class action) */}
-        <DropdownMenu.Item
-          label="Cloud Sync & Backup..."
-          icon={<Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
-          onSelect={() => {
-            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
-          }}
-        />
+        {/* Folder & Cloud Sync Submenu */}
+        <DropdownMenu.Sub
+          label="Folder & Cloud Sync"
+          icon={
+            <FolderGit2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+          }
+          alignGutter
+        >
+          <WorkspaceFolderSyncMenuItems />
+        </DropdownMenu.Sub>
 
         <DropdownMenu.Separator />
 
@@ -518,22 +538,24 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <DropdownMenu.Sub
           label="Panel Layout"
           icon={<Columns className="w-3.5 h-3.5" />}
-          alignGutter
         >
           <DropdownMenu.Item
             label="Split Editor & Preview"
             commandId="view.splitMode"
             onSelect={() => setPreviewMode("split")}
+            checked={previewMode === "split"}
           />
           <DropdownMenu.Item
             label="Editor Only"
             commandId="view.editorOnly"
             onSelect={() => setPreviewMode("editor-only")}
+            checked={previewMode === "editor-only"}
           />
           <DropdownMenu.Item
             label="Preview Only"
             commandId="view.previewOnly"
             onSelect={() => setPreviewMode("preview-only")}
+            checked={previewMode === "preview-only"}
           />
         </DropdownMenu.Sub>
 

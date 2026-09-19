@@ -12,7 +12,7 @@ import {
 } from "./cryptoUtils";
 
 const DB_NAME = "TextEditorDB";
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const STORE_NAME = "tabs_session";
 const SETTINGS_STORE = "settings";
 const SCRIPT_FUNCTIONS_STORE = "script_functions";
@@ -21,6 +21,7 @@ const WORKSPACES_STORE = "workspaces";
 const RECENT_FILES_STORE = "recent_files";
 const CLOUD_AUTH_STORE = "cloud_auth";
 const DEVICE_KEYS_STORE = "device_keys";
+const FOLDER_HANDLES_STORE = "folder-handles";
 const DEVICE_AUTH_KEY_ID = "auth_storage_key";
 
 interface SessionRecord {
@@ -58,6 +59,9 @@ function getDB() {
         }
         if (!db.objectStoreNames.contains(DEVICE_KEYS_STORE)) {
           db.createObjectStore(DEVICE_KEYS_STORE);
+        }
+        if (!db.objectStoreNames.contains(FOLDER_HANDLES_STORE)) {
+          db.createObjectStore(FOLDER_HANDLES_STORE);
         }
       },
     });
@@ -358,3 +362,51 @@ export async function deleteCloudAuth(key: string): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Folder Handles — native FileSystemDirectoryHandle storage via structured clone
+// ---------------------------------------------------------------------------
+
+/**
+ * Saves a FileSystemDirectoryHandle for a workspace.
+ * IDB stores FileSystemHandle natively via structured clone (not JSON).
+ */
+export async function saveFolderHandle(
+  workspaceId: string,
+  handle: FileSystemDirectoryHandle,
+): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.put(FOLDER_HANDLES_STORE, handle, workspaceId);
+  } catch (error) {
+    console.warn(`Failed to save folder handle for workspace "${workspaceId}"`, error);
+  }
+}
+
+/**
+ * Loads a previously saved FileSystemDirectoryHandle for a workspace.
+ * Returns null if not found or if the browser session no longer has the handle.
+ */
+export async function loadFolderHandle(
+  workspaceId: string,
+): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    const db = await getDB();
+    const handle = await db.get(FOLDER_HANDLES_STORE, workspaceId);
+    return handle instanceof FileSystemDirectoryHandle ? handle : null;
+  } catch (error) {
+    console.warn(`Failed to load folder handle for workspace "${workspaceId}"`, error);
+    return null;
+  }
+}
+
+/**
+ * Removes the stored FileSystemDirectoryHandle for a workspace (on unlink).
+ */
+export async function deleteFolderHandle(workspaceId: string): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.delete(FOLDER_HANDLES_STORE, workspaceId);
+  } catch (error) {
+    console.warn(`Failed to delete folder handle for workspace "${workspaceId}"`, error);
+  }
+}

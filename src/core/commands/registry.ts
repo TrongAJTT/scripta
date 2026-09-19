@@ -128,6 +128,68 @@ export const COMMANDS: Record<CommandId, Command> = {
       meta: false,
     },
   },
+  "file.tabInfo": {
+    id: "file.tabInfo",
+    label: "Tab Information...",
+    category: "File",
+    defaultKeybinding: null,
+  },
+
+  // --- Workspace ---
+  "workspace.openFolder": {
+    id: "workspace.openFolder",
+    label: "Open Folder as Workspace",
+    category: "File",
+    defaultKeybinding: {
+      key: "KeyO",
+      alt: true,
+      ctrl: false,
+      shift: false,
+      meta: false,
+    },
+  },
+  "workspace.saveFolder": {
+    id: "workspace.saveFolder",
+    label: "Save Workspace as Folder",
+    category: "File",
+    defaultKeybinding: {
+      key: "KeyS",
+      alt: true,
+      ctrl: false,
+      shift: true,
+      meta: false,
+    },
+  },
+  "workspace.save": {
+    id: "workspace.save",
+    label: "Save Workspace",
+    category: "File",
+    defaultKeybinding: {
+      key: "KeyS",
+      alt: true,
+      ctrl: false,
+      shift: false,
+      meta: false,
+    },
+  },
+  "workspace.cloudSync": {
+    id: "workspace.cloudSync",
+    label: "Cloud Sync & Backup...",
+    category: "File",
+    defaultKeybinding: {
+      key: "KeyC",
+      alt: true,
+      ctrl: false,
+      shift: true,
+      meta: false,
+    },
+  },
+  "workspace.info": {
+    id: "workspace.info",
+    label: "Workspace Information",
+    category: "File",
+    defaultKeybinding: null,
+  },
 
   // --- Edit (Core) ---
   "edit.findReplace": {

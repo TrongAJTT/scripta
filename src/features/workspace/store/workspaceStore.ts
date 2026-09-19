@@ -24,6 +24,10 @@ export interface WorkspaceStoreState {
   ) => Promise<WorkspaceSession>;
   saveCurrentWorkspaceState: () => Promise<void>;
   renameWorkspace: (workspaceId: string, newName: string) => Promise<void>;
+  updateWorkspaceInfo: (
+    workspaceId: string,
+    info: { name?: string; description?: string },
+  ) => Promise<void>;
   deleteWorkspace: (workspaceId: string) => Promise<void>;
   duplicateWorkspace: (
     workspaceId: string,
@@ -221,6 +225,27 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     const updatedWs: WorkspaceSession = {
       ...ws,
       name: trimmed,
+      updatedAt: Date.now(),
+    };
+
+    await saveWorkspace(updatedWs);
+    set({
+      workspaces: workspaces.map((w) => (w.id === workspaceId ? updatedWs : w)),
+    });
+  },
+
+  updateWorkspaceInfo: async (
+    workspaceId: string,
+    info: { name?: string; description?: string },
+  ) => {
+    const { workspaces } = get();
+    const ws = workspaces.find((w) => w.id === workspaceId);
+    if (!ws) return;
+
+    const updatedWs: WorkspaceSession = {
+      ...ws,
+      ...(info.name !== undefined ? { name: info.name.trim() || ws.name } : {}),
+      ...(info.description !== undefined ? { description: info.description } : {}),
       updatedAt: Date.now(),
     };
 

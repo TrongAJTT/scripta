@@ -18,6 +18,9 @@ import { AppUpdateModal } from "./features/settings/components/AppUpdateModal";
 import { AboutModal } from "./features/settings/components/AboutModal";
 import { InstallAppModal } from "./features/settings/components/InstallAppModal";
 import { CloudSyncModal } from "./features/storage/components/CloudSyncModal";
+import { WorkspaceInfoModal } from "./features/workspace/components/WorkspaceInfoModal";
+import { TabInfoModal } from "./features/tabs/components/TabInfoModal";
+import { workspaceFolderService } from "./features/workspace/services/workspaceFolderService";
 import { useScriptStore } from "./features/scripts/store/scriptStore";
 import { useWorkspaceStore } from "./features/workspace/store/workspaceStore";
 import { useCloudStorageStore } from "./features/storage/store/cloudStorageStore";
@@ -92,6 +95,8 @@ export const App: React.FC = () => {
   const [isInstallAppOpen, setIsInstallAppOpen] = useState(false);
   const [isMobileTabDrawerOpen, setIsMobileTabDrawerOpen] = useState(false);
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
+  const [isWorkspaceInfoOpen, setIsWorkspaceInfoOpen] = useState(false);
+  const [isTabInfoOpen, setIsTabInfoOpen] = useState(false);
   const [runningScript, setRunningScript] = useState<ScriptMetadata | null>(
     null,
   );
@@ -108,7 +113,9 @@ export const App: React.FC = () => {
     const cleanupSystemTheme = initSystemThemeListener();
 
     const handleOpenCloudSync = () => setIsCloudSyncOpen(true);
+    const handleOpenWorkspaceInfo = () => setIsWorkspaceInfoOpen(true);
     window.addEventListener("open-cloud-sync-modal", handleOpenCloudSync);
+    window.addEventListener("open-workspace-info-modal", handleOpenWorkspaceInfo);
 
     const initApp = async () => {
       await initStore();
@@ -129,6 +136,10 @@ export const App: React.FC = () => {
     return () => {
       cleanupSystemTheme();
       window.removeEventListener("open-cloud-sync-modal", handleOpenCloudSync);
+      window.removeEventListener(
+        "open-workspace-info-modal",
+        handleOpenWorkspaceInfo,
+      );
     };
   }, [initStore, initScriptStore, initCloudStatus]);
 
@@ -261,6 +272,42 @@ export const App: React.FC = () => {
             }
           },
         },
+        { id: "file.tabInfo", action: () => setIsTabInfoOpen(true) },
+        {
+          id: "workspace.save",
+          action: () => {
+            const ws = useWorkspaceStore.getState().workspaces.find(
+              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+            );
+            if (!ws) return;
+            void workspaceFolderService.saveWorkspace(ws.id).then((result) => {
+              if (result === "no-folder")
+                void workspaceFolderService.saveWorkspaceToFolder(ws);
+            });
+          },
+        },
+        {
+          id: "workspace.saveFolder",
+          action: () => {
+            const ws = useWorkspaceStore.getState().workspaces.find(
+              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+            );
+            if (ws) void workspaceFolderService.saveWorkspaceToFolder(ws);
+          },
+        },
+        {
+          id: "workspace.openFolder",
+          action: () => void workspaceFolderService.openFolderAsWorkspace(),
+        },
+        {
+          id: "workspace.cloudSync",
+          action: () =>
+            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal")),
+        },
+        {
+          id: "workspace.info",
+          action: () => setIsWorkspaceInfoOpen(true),
+        },
       ];
 
       for (const cmd of commandsMap) {
@@ -291,6 +338,7 @@ export const App: React.FC = () => {
     saveCurrentTab,
     saveCurrentTabAs,
     toggleSearch,
+    // workspace commands don't need reactive deps — they read store state lazily
   ]);
 
   // External File Watcher: Check for changes on window focus and periodically
@@ -452,6 +500,8 @@ export const App: React.FC = () => {
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenInstallApp={() => setIsInstallAppOpen(true)}
         onRunScript={(script) => setRunningScript(script)}
+        onOpenWorkspaceInfo={() => setIsWorkspaceInfoOpen(true)}
+        onOpenTabInfo={() => setIsTabInfoOpen(true)}
       />
 
       {/* 2. Main Toolbar */}
@@ -565,6 +615,20 @@ export const App: React.FC = () => {
           <CloudSyncModal
             isOpen={isCloudSyncOpen}
             onClose={() => setIsCloudSyncOpen(false)}
+          />
+
+          {/* Workspace Information Modal */}
+          <WorkspaceInfoModal
+            isOpen={isWorkspaceInfoOpen}
+            onClose={() => setIsWorkspaceInfoOpen(false)}
+            onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+          />
+
+          {/* Tab Information Modal */}
+          <TabInfoModal
+            isOpen={isTabInfoOpen}
+            tab={activeTab ?? null}
+            onClose={() => setIsTabInfoOpen(false)}
           />
 
           {/* Script Manager Modal */}

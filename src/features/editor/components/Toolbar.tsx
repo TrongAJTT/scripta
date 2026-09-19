@@ -31,11 +31,12 @@ import {
   Link,
   Check,
   Bookmark,
-  Cloud,
+  FolderGit2,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
 import { WorkspaceMenuItems } from "../../workspace/components/WorkspaceMenuItems";
+import { WorkspaceFolderSyncMenuItems } from "../../workspace/components/WorkspaceFolderSyncMenuItems";
 import { ThemeMenuItems } from "../../settings/components/ThemeMenuItems";
 import { BookmarkMenuItems } from "./BookmarkMenuItems";
 import { DropdownMenu } from "../../../shared/components/DropdownMenu";
@@ -436,16 +437,24 @@ export const Toolbar: React.FC = () => {
           </DropdownMenu>
         </div>
 
-        {/* Quick Cloud Sync & Backup Button (Desktop) */}
-        <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
-          }}
-          className="hidden md:flex toolbar-btn text-xs"
-          title="Cloud Sync & Backup"
-        >
-          <Cloud className="w-4 h-4 text-[var(--accent-blue)]" />
-        </button>
+        {/* Folder & Cloud Sync Dropdown Menu (Desktop) */}
+        <div className="hidden md:flex items-center">
+          <DropdownMenu
+            align="right"
+            alignGutter
+            trigger={
+              <button
+                className="toolbar-btn flex items-center gap-1 px-1.5 text-xs text-[var(--accent-blue)]"
+                title="Folder & Cloud Sync"
+              >
+                <FolderGit2 className="w-4 h-4 text-[var(--accent-blue)]" />
+                <span className="text-[9px] text-[var(--text-muted)]">▾</span>
+              </button>
+            }
+          >
+            <WorkspaceFolderSyncMenuItems />
+          </DropdownMenu>
+        </div>
 
         {/* Theme Dropdown Menu (Desktop) */}
         <div className="hidden md:block">
@@ -671,13 +680,16 @@ export const Toolbar: React.FC = () => {
               <WorkspaceMenuItems />
             </DropdownMenu.Sub>
 
-            <DropdownMenu.Item
-              label="Cloud Sync & Backup..."
-              icon={<Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
-              onSelect={() => {
-                window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
-              }}
-            />
+            {/* Folder & Cloud Sync Accordion Submenu */}
+            <DropdownMenu.Sub
+              label="Folder & Cloud Sync"
+              icon={
+                <FolderGit2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+              }
+              alignGutter
+            >
+              <WorkspaceFolderSyncMenuItems />
+            </DropdownMenu.Sub>
 
             {/* Appearance / Theme Accordion Submenu */}
             <DropdownMenu.Sub
