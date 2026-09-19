@@ -1,5 +1,5 @@
 import React from "react";
-import { Folder, Plus, Edit2, Trash2, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, Check, Cloud } from "lucide-react";
 import { useWorkspaceStore } from "../store/workspaceStore";
 import {
   promptCreateWorkspace,
@@ -31,15 +31,13 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
       {/* List of Workspaces */}
       {workspaces.map((ws) => {
         const isActive = ws.id === activeWorkspaceId;
+        const isSynced = Boolean(ws.lastSyncedAt);
+
         return (
           <DropdownMenu.Item
             key={ws.id}
             icon={
-              isActive ? (
-                <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
-              ) : (
-                <Folder className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              )
+              isActive && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
             }
             label={
               <div className="flex items-center justify-between w-full pr-1">
@@ -52,9 +50,23 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
                 >
                   {ws.name}
                 </span>
-                <span className="text-[10px] text-[var(--text-muted)] font-mono ml-2">
-                  {ws.tabs.length} {ws.tabs.length === 1 ? "tab" : "tabs"}
-                </span>
+                <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                  {isSynced && (
+                    <span
+                      title={
+                        ws.lastSyncedProvider
+                          ? `Synced to ${ws.lastSyncedProvider === "dropbox" ? "Dropbox" : "GitHub"}`
+                          : "Synced to Cloud"
+                      }
+                      className="inline-flex items-center"
+                    >
+                      <Cloud className="w-3 h-3 text-[var(--accent-blue)] shrink-0" />
+                    </span>
+                  )}
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                    {ws.tabs.length} {ws.tabs.length === 1 ? "tab" : "tabs"}
+                  </span>
+                </div>
               </div>
             }
             onSelect={() => {

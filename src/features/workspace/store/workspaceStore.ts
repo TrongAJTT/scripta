@@ -29,6 +29,15 @@ export interface WorkspaceStoreState {
     workspaceId: string,
     newName: string,
   ) => Promise<WorkspaceSession>;
+  markWorkspaceSynced: (
+    workspaceId: string,
+    provider: "dropbox" | "github",
+    timestamp?: number,
+  ) => Promise<void>;
+  applyWorkspaceSession: (
+    workspace: WorkspaceSession,
+    isNewCopy?: boolean,
+  ) => Promise<WorkspaceSession>;
 }
 
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
@@ -287,5 +296,101 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     } else {
       set({ workspaces: remaining });
     }
+  },
+
+  markWorkspaceSynced: async (
+    workspaceId: string,
+    provider: "dropbox" | "github",
+    timestamp?: number,
+  ) => {
+    const { workspaces } = get();
+    const targetWs = workspaces.find((w) => w.id === workspaceId);
+    if (!targetWs) return;
+
+    const syncedAt = timestamp || Date.now();
+    const updatedWs: WorkspaceSession = {
+      ...targetWs,
+      lastSyncedAt: syncedAt,
+      lastSyncedProvider: provider,
+    };
+
+    await saveWorkspace(updatedWs);
+
+    set({
+      workspaces: workspaces.map((w) => (w.id === workspaceId ? updatedWs : w)),
+    });
+  },
+
+  applyWorkspaceSession: async (
+    workspace: WorkspaceSession,
+    isNewCopy: boolean = false,
+  ) => {
+    // Cancel any debounced auto-saves from previous editor tabs
+    cancelPendingSessionSave();
+
+    const { workspaces } = get();
+
+    let targetWs: WorkspaceSession;
+    if (isNewCopy) {
+      targetWs = {
+        ...workspace,
+        id: crypto.randomUUID(),
+        name: `${workspace.name} (Cloud Copy)`,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        tabs: workspace.tabs.map((t) => ({ ...t, id: crypto.randomUUID() })),
+      };
+      targetWs.activeTabId = targetWs.tabs[0]?.id || null;
+    } else {
+      targetWs = {
+        ...workspace,
+        updatedAt: Date.now(),
+      };
+    }
+
+    // 1. Persist directly to IndexedDB
+    await saveWorkspace(targetWs);
+    await saveActiveWorkspaceId(targetWs.id);
+
+    // 2. Prepare restored tabs
+    const restoredTabs: FileTab[] = targetWs.tabs.map((t) => ({
+      ...t,
+      isModified: t.content !== t.savedContent,
+    }));
+
+    // 3. Immediately activate tabs in editor store
+    if (restoredTabs.length === 0) {
+      useEditorStore.getState().closeAllTabs();
+    } else {
+      const activeId =
+        targetWs.activeTabId &&
+        restoredTabs.some((t) => t.id === targetWs.activeTabId)
+          ? targetWs.activeTabId
+          : restoredTabs[0].id;
+
+      useEditorStore.setState({
+        tabs: restoredTabs,
+        activeTabId: activeId,
+      });
+    }
+
+    // 4. Update workspace store state
+    const existingIndex = workspaces.findIndex((w) => w.id === targetWs.id);
+    let updatedWorkspaces: WorkspaceSession[];
+
+    if (existingIndex >= 0) {
+      updatedWorkspaces = workspaces.map((w) =>
+        w.id === targetWs.id ? targetWs : w,
+      );
+    } else {
+      updatedWorkspaces = [...workspaces, targetWs];
+    }
+
+    set({
+      workspaces: updatedWorkspaces,
+      activeWorkspaceId: targetWs.id,
+    });
+
+    return targetWs;
   },
 }));

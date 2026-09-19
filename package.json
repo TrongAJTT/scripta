@@ -1,7 +1,7 @@
 {
   "name": "scripta",
   "private": true,
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Scripta - Modern Hybrid Text Editor & Live Document Viewer",
   "license": "Apache-2.0",
   "type": "module",

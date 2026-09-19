@@ -7,54 +7,62 @@
 ## 📌 Commit Message
 
 ```text
-feat: publish Scripta v1.1.4
+feat: implement Cloud Workspace Sync with GitHub & Dropbox providers
 
-- Core Architecture & Engine:
-  - Vite 8 + React 19 + TypeScript strict mode with CodeMirror 6 text editor.
-  - Multi-tab management with persistent IndexedDB session recovery, tab pinning, locking, and tab reordering.
-  - Native File System Access API integration with fallback download handlers and external file change detection.
-- Live Previews & Adapters:
-  - Real-time Markdown rendering with DOMPurify sanitization.
-  - Interactive Mermaid.js diagrams with vector SVG export.
-  - Live HTML/CSS runner, Vector SVG viewer, Image inspector, and in-browser Python (Pyodide WASM).
-- v1.1.4 Feature Additions:
-  - Line Bookmarks: CodeMirror 6 custom gutter markers, keyboard shortcuts (Ctrl+F2, F2, Shift+F2), and unified BookmarkMenuItems component.
-  - Dual-Zone Drag & Drop: Side-by-side overlay to Open as New Tab(s) or Append to Cursor without sticky hover bugs.
-  - Reopen Closed Files: Closed files stack and Recent Files Service backed by IndexedDB.
-- Scripting & Automation:
-  - Client-side Web Worker script execution engine with JSON Mode Editor, sample data runner, and macro templates.
-- Workspaces & Settings:
-  - Multi-workspace isolated session management.
-  - Comprehensive shortcut mapper, centralized command registry, encoding converter, and zero-FOUC theme presets.
+- Cloud Storage Architecture:
+  - Multi-provider client-side storage adapters: GitHub (Personal Access Token & REST API) and Dropbox (OAuth 2.0 PKCE without backend proxy).
+  - Centralized storage endpoint constants, types, and modular provider configuration views (`GitHubConfigForm`, `DropboxConfigView`).
+  - Zero-knowledge client-side encryption: AES-GCM-256 with PBKDF2 key derivation for encrypted cloud backups.
+  - Client-side token encryption: Non-extractable Web Crypto API device keys stored in IndexedDB (`device_keys`) protecting authentication credentials in `cloud_auth`.
+
+- Workspace Sync & Conflict Management:
+  - Filename-encoded metadata: Format `workspaces/{Name}__{tabs}tabs__{timestamp}__{id}.{json|enc}` for O(1) tab counts and last-modified dates across all cloud providers without redundant metadata fetches.
+  - Optimized GitHub cache bypass (`_t` query parameter) and pre-check file updates to prevent 404 console errors.
+  - Interactive version conflict resolution: 3-way choice (Cancel, Overwrite, or Restore as Copy) with visual side-by-side comparison of local vs cloud tabs and timestamps.
+  - Immediate editor tab activation upon workspace restoration (`applyWorkspaceSession`), eliminating short-circuiting bugs.
+
+- UI & UX Refinements:
+  - Unified `CloudSyncModal` with 3 segmented views: Sync Current (with 4-state real-time sync badges), Cloud List, and Connection Settings.
+  - Streamlined single-row Cloud List item layout with Just-In-Time master password prompt dialog (`dialog.prompt` with `inputType="password"`).
+  - Dismissible `InlineBanner` component with internal state and auto-dismiss timer for in-modal feedback.
+  - Visual cloud sync indicator on Toolbar and Workspace popup menus with accent color shifts and Cloud badge markers.
+  - Centralized `formatDateTime` utility in `dateUtils.ts`.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Editor Core & Line Bookmarks (`src/features/editor/`)
+### 1. Cloud Storage Core & Adapters (`src/features/storage/`)
 
-- [bookmarkExtension.ts](file:///g:/TextEditor/src/features/editor/services/bookmarkExtension.ts): Custom CodeMirror 6 gutter marker, position mapping through document changes, and line jumper helpers (`Ctrl+F2`, `F2`, `Shift+F2`).
-- [BookmarkMenuItems.tsx](file:///g:/TextEditor/src/features/editor/components/BookmarkMenuItems.tsx): Reusable, DRY menu component for bookmarks across `MenuBar` and `Toolbar`.
-- [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx): Compartmentalized CodeMirror view supporting syntax highlighting, theme switching, whitespace rendering, dynamic line numbers, and session bookmark syncing.
+- [storageEndpoints.ts](file:///g:/TextEditor/src/features/storage/constants/storageEndpoints.ts): Centralized endpoint URLs, REST paths, OAuth URLs, and PAT creation links for GitHub & Dropbox.
+- [storage.types.ts](file:///g:/TextEditor/src/features/storage/types/storage.types.ts): Unified interfaces for `CloudStorageAdapter`, `StorageItem`, `GitHubAuthConfig`, `DropboxAuthConfig`, and provider status.
+- [cloudStorageStore.ts](file:///g:/TextEditor/src/features/storage/store/cloudStorageStore.ts): Zustand store for connection states, provider credentials, and status initialization.
+- [githubAdapter.ts](file:///g:/TextEditor/src/features/storage/adapters/githubAdapter.ts): Direct GitHub API integration with commit sha resolution, cache-busting, and branch handling.
+- [dropboxAdapter.ts](file:///g:/TextEditor/src/features/storage/adapters/dropboxAdapter.ts): Pure client-side Dropbox integration with OAuth 2.0 PKCE, code verifier generation, and token refresh.
+- [workspaceSyncService.ts](file:///g:/TextEditor/src/features/storage/services/workspaceSyncService.ts): End-to-end workspace sync orchestration, filename metadata parsing, upload deduplication, and conflict resolution dialog comparing local vs cloud versions.
+- [GitHubConfigForm.tsx](file:///g:/TextEditor/src/features/storage/components/providers/GitHubConfigForm.tsx): Modular settings form for GitHub token, owner, repository, and branch.
+- [DropboxConfigView.tsx](file:///g:/TextEditor/src/features/storage/components/providers/DropboxConfigView.tsx): Modular OAuth connection and disconnect view for Dropbox.
+- [CloudSyncModal.tsx](file:///g:/TextEditor/src/features/storage/components/CloudSyncModal.tsx): Feature modal with segmented views (Sync Current with real-time status badges, Cloud List with single-row layout and JIT password prompt, and Connection Settings).
 
-### 2. File Operations & Dual-Zone Drag & Drop (`src/features/file-system/`, `src/features/tabs/`)
+### 2. Security & Core Utilities (`src/core/`)
 
-- [store.ts](file:///g:/TextEditor/src/features/tabs/store.ts): Multi-tab state management with dual-zone drag handlers (`Open as New Tab` vs `Append to Active Tab`), tab pinning/locking, and debounced IndexedDB autosave.
-- [recentFilesService.ts](file:///g:/TextEditor/src/features/file-system/services/recentFilesService.ts): Recent files tracking and `reopenClosedFile` stack (`Ctrl+Shift+T`).
-- [fileSystemApi.ts](file:///g:/TextEditor/src/features/file-system/data/fileSystemApi.ts): File System Access API wrapper with graceful cross-browser fallback.
+- [cryptoUtils.ts](file:///g:/TextEditor/src/core/utils/cryptoUtils.ts): Web Crypto API AES-GCM-256 encryption/decryption with PBKDF2 key derivation, IV salting, device key generation, and payload validation.
+- [idbStorage.ts](file:///g:/TextEditor/src/core/utils/idbStorage.ts): IndexedDB upgraded to v6 with `device_keys` store for non-extractable CryptoKey persistence, auto-encrypting tokens before writing to `cloud_auth`.
+- [dateUtils.ts](file:///g:/TextEditor/src/core/utils/dateUtils.ts): Centralized `formatDateTime` utility for localized date and time representation across the application.
+- [app.ts](file:///g:/TextEditor/src/core/constants/app.ts): Cloud storage redirect URI and application constants.
+- [workspace.types.ts](file:///g:/TextEditor/src/core/types/workspace.types.ts): Added `lastSyncedAt` and `lastSyncedProvider` to `WorkspaceSession`.
 
-### 3. Live Previews (`src/features/preview/`)
+### 3. Workspace Store & Restoration (`src/features/workspace/`)
 
-- Multi-format preview adapters: Markdown, Mermaid diagrams, HTML, CSS, Vector SVG, Raster images, and Python execution via WebAssembly Pyodide.
+- [workspaceStore.ts](file:///g:/TextEditor/src/features/workspace/store/workspaceStore.ts): Added `applyWorkspaceSession` to directly persist and load restored tabs into `useEditorStore` (resetting modified flags and canceling pending saves), plus `markWorkspaceSynced`.
+- [WorkspaceMenuItems.tsx](file:///g:/TextEditor/src/features/workspace/components/WorkspaceMenuItems.tsx): Added cloud indicator icon and provider title next to tab counts for synced workspaces.
 
-### 4. Workspaces & Script Automation (`src/features/workspace/`, `src/features/scripts/`)
+### 4. UI Components & Dialog System (`src/shared/`, `src/app/`, `src/features/editor/`)
 
-- Workspace switcher and session organizer in IndexedDB.
-- Script runner executing JavaScript batch transformations safely inside sandboxed Web Workers.
+- [dialogStore.ts](file:///g:/TextEditor/src/shared/dialog/dialogStore.ts) & [GlobalDialogHost.tsx](file:///g:/TextEditor/src/shared/dialog/GlobalDialogHost.tsx): Added `inputType?: "text" | "password"` support to `dialog.prompt` for secure password entry.
+- [InlineBanner.tsx](file:///g:/TextEditor/src/shared/components/InlineBanner.tsx): Reusable dismissible notification banner with auto-dismiss and transition animations.
+- [Toolbar.tsx](file:///g:/TextEditor/src/features/editor/components/Toolbar.tsx): Added cloud indicator dot and accent color shifts to the active workspace Folder button when synced; added Quick Cloud Sync button.
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx): Added "Cloud Sync & Backup..." menu item under File menu.
+- [App.tsx](file:///g:/TextEditor/src/App.tsx): Registered `CloudSyncModal` and global event listener `open-cloud-sync-modal`.
 
-### 5. Application Infrastructure & Distribution (`.github/`, root)
-
-- [release.yml](file:///g:/TextEditor/.github/workflows/release.yml): Automated GitHub release workflow packaging standalone `scripta-v*.zip` with SHA256 checksums and Sigstore provenance attestations.
-- [README.md](file:///g:/TextEditor/README.md): Polished project documentation with hero preview banner, feature matrix, and keyboard shortcut reference.
-- [package.json](file:///g:/TextEditor/package.json): Version 1.1.4 with Apache-2.0 license.

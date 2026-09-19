@@ -6,6 +6,8 @@ export interface WorkspaceSession {
   description?: string;
   createdAt: number;
   updatedAt: number;
+  lastSyncedAt?: number;
+  lastSyncedProvider?: "dropbox" | "github";
   activeTabId: string | null;
   tabs: FileTab[];
 }

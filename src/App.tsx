@@ -17,8 +17,10 @@ import { ScriptRunModal } from "./features/scripts/components/ScriptRunModal";
 import { AppUpdateModal } from "./features/settings/components/AppUpdateModal";
 import { AboutModal } from "./features/settings/components/AboutModal";
 import { InstallAppModal } from "./features/settings/components/InstallAppModal";
+import { CloudSyncModal } from "./features/storage/components/CloudSyncModal";
 import { useScriptStore } from "./features/scripts/store/scriptStore";
 import { useWorkspaceStore } from "./features/workspace/store/workspaceStore";
+import { useCloudStorageStore } from "./features/storage/store/cloudStorageStore";
 import { initSystemThemeListener } from "./features/settings/services/themeService";
 import {
   checkForUpdates,
@@ -87,12 +89,14 @@ export const App: React.FC = () => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isInstallAppOpen, setIsInstallAppOpen] = useState(false);
   const [isMobileTabDrawerOpen, setIsMobileTabDrawerOpen] = useState(false);
+  const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [runningScript, setRunningScript] = useState<ScriptMetadata | null>(
     null,
   );
 
   const editorCmds = useEditorCommands();
   const initScriptStore = useScriptStore((s) => s.initScriptStore);
+  const initCloudStatus = useCloudStorageStore((s) => s.initCloudStatus);
 
   // Keybinding store actions
   const getKeybinding = useKeybindingStore((s) => s.getKeybinding);
@@ -100,10 +104,15 @@ export const App: React.FC = () => {
   // Init store, load session, and check automated updates
   useEffect(() => {
     const cleanupSystemTheme = initSystemThemeListener();
+
+    const handleOpenCloudSync = () => setIsCloudSyncOpen(true);
+    window.addEventListener("open-cloud-sync-modal", handleOpenCloudSync);
+
     const initApp = async () => {
       await initStore();
       await initScriptStore();
       await useWorkspaceStore.getState().initWorkspaces();
+      await initCloudStatus();
 
       // Automated update check based on interval settings
       if (shouldPerformAutoCheck()) {
@@ -117,8 +126,9 @@ export const App: React.FC = () => {
     void initApp();
     return () => {
       cleanupSystemTheme();
+      window.removeEventListener("open-cloud-sync-modal", handleOpenCloudSync);
     };
-  }, [initStore, initScriptStore]);
+  }, [initStore, initScriptStore, initCloudStatus]);
 
   // Centralized keyboard shortcut execution via Command Registry
   useEffect(() => {
@@ -531,6 +541,12 @@ export const App: React.FC = () => {
           <InstallAppModal
             isOpen={isInstallAppOpen}
             onClose={() => setIsInstallAppOpen(false)}
+          />
+
+          {/* Cloud Sync & Encryption Modal */}
+          <CloudSyncModal
+            isOpen={isCloudSyncOpen}
+            onClose={() => setIsCloudSyncOpen(false)}
           />
 
           {/* Script Manager Modal */}

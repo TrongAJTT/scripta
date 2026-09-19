@@ -31,6 +31,7 @@ import {
   Link,
   Check,
   Bookmark,
+  Cloud,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
@@ -403,12 +404,27 @@ export const Toolbar: React.FC = () => {
         <div className="hidden md:flex items-center">
           <DropdownMenu
             align="right"
+            alignGutter
             trigger={
               <button
                 className="toolbar-btn flex items-center gap-1.5 px-2 text-xs font-normal"
-                title={`Active Workspace: ${activeWorkspace?.name || "Workspace"}`}
+                title={`Active Workspace: ${activeWorkspace?.name || "Workspace"}${activeWorkspace?.lastSyncedAt ? " (Synced to Cloud)" : ""}`}
               >
-                <Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)] shrink-0" />
+                <div className="relative flex items-center shrink-0">
+                  <Folder
+                    className={`w-3.5 h-3.5 ${
+                      activeWorkspace?.lastSyncedAt
+                        ? "text-[var(--accent-blue)]"
+                        : "text-[var(--accent-yellow)]"
+                    }`}
+                  />
+                  {activeWorkspace?.lastSyncedAt && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--accent-blue)] ring-1 ring-[var(--bg-toolbar)]"
+                      title="Cloud Synced"
+                    />
+                  )}
+                </div>
                 <span className="max-w-[110px] truncate text-[11px] text-[var(--text-main)] font-medium">
                   {activeWorkspace?.name || "Workspace"}
                 </span>
@@ -419,6 +435,17 @@ export const Toolbar: React.FC = () => {
             <WorkspaceMenuItems />
           </DropdownMenu>
         </div>
+
+        {/* Quick Cloud Sync & Backup Button (Desktop) */}
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
+          }}
+          className="hidden md:flex toolbar-btn text-xs"
+          title="Cloud Sync & Backup"
+        >
+          <Cloud className="w-4 h-4 text-[var(--accent-blue)]" />
+        </button>
 
         {/* Theme Dropdown Menu (Desktop) */}
         <div className="hidden md:block">
@@ -631,12 +658,26 @@ export const Toolbar: React.FC = () => {
             <DropdownMenu.Sub
               label="Workspace"
               icon={
-                <Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />
+                <Folder
+                  className={`w-3.5 h-3.5 ${
+                    activeWorkspace?.lastSyncedAt
+                      ? "text-[var(--accent-blue)]"
+                      : "text-[var(--accent-yellow)]"
+                  }`}
+                />
               }
               alignGutter
             >
               <WorkspaceMenuItems />
             </DropdownMenu.Sub>
+
+            <DropdownMenu.Item
+              label="Cloud Sync & Backup..."
+              icon={<Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+              onSelect={() => {
+                window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
+              }}
+            />
 
             {/* Appearance / Theme Accordion Submenu */}
             <DropdownMenu.Sub

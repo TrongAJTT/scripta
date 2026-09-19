@@ -47,6 +47,7 @@ import {
   Clock,
   Trash2,
   Bookmark,
+  Cloud,
 } from "lucide-react";
 import {
   COMMON_ENCODINGS,
@@ -276,9 +277,19 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <DropdownMenu.Sub
           label="Workspace"
           icon={<Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />}
+          alignGutter
         >
           <WorkspaceMenuItems />
         </DropdownMenu.Sub>
+
+        {/* Cloud Sync & Backup (First-class action) */}
+        <DropdownMenu.Item
+          label="Cloud Sync & Backup..."
+          icon={<Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+          onSelect={() => {
+            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal"));
+          }}
+        />
 
         <DropdownMenu.Separator />
 
