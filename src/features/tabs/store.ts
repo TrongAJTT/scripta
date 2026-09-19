@@ -72,7 +72,11 @@ interface EditorState {
   closeAllTabsWithPrompt: () => Promise<void>;
   togglePinTab: (id: string) => void;
   toggleLockTab: (id: string) => void;
-  moveTabToWorkspace: (tabId: string, targetWorkspaceId: string) => Promise<void>;
+  renameTab: (id: string, newName: string) => void;
+  moveTabToWorkspace: (
+    tabId: string,
+    targetWorkspaceId: string,
+  ) => Promise<void>;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   setActiveTab: (id: string) => void;
   updateTabContent: (id: string, content: string) => void;
@@ -276,7 +280,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
 
     const nextTabs = [...tabs, newTab];
-    const nextRecent = [newTab.id, ...(get().recentTabIds || []).filter((id) => id !== newTab.id)];
+    const nextRecent = [
+      newTab.id,
+      ...(get().recentTabIds || []).filter((id) => id !== newTab.id),
+    ];
     set({
       tabs: nextTabs,
       activeTabId: newTab.id,
@@ -301,7 +308,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     let nextActiveId = activeTabId;
 
     if (activeTabId === id) {
-      if (nextRecent.length > 0 && nextTabs.some((t) => t.id === nextRecent[0])) {
+      if (
+        nextRecent.length > 0 &&
+        nextTabs.some((t) => t.id === nextRecent[0])
+      ) {
         nextActiveId = nextRecent[0];
       } else if (nextTabs.length > 0) {
         const newIdx = Math.min(targetIdx, nextTabs.length - 1);
@@ -315,14 +325,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
-    set({ tabs: nextTabs, activeTabId: nextActiveId, recentTabIds: nextRecent });
+    set({
+      tabs: nextTabs,
+      activeTabId: nextActiveId,
+      recentTabIds: nextRecent,
+    });
     debouncedSaveSession(nextTabs, nextActiveId);
+  },
+
+  renameTab: (id: string, newName: string) => {
+    const { tabs, activeTabId } = get();
+    const updated = tabs.map((t) =>
+      t.id === id ? { ...t, name: newName } : t,
+    );
+    set({ tabs: updated });
+    debouncedSaveSession(updated, activeTabId);
   },
 
   togglePinTab: (id: string) => {
     const { tabs, activeTabId } = get();
     const updated = tabs.map((t) =>
-      t.id === id ? { ...t, isPinned: !t.isPinned } : t
+      t.id === id ? { ...t, isPinned: !t.isPinned } : t,
     );
     // Stable sort: Pinned tabs come first
     const pinned = updated.filter((t) => t.isPinned);
@@ -335,7 +358,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleLockTab: (id: string) => {
     const { tabs, activeTabId } = get();
     const nextTabs = tabs.map((t) =>
-      t.id === id ? { ...t, isLocked: !t.isLocked } : t
+      t.id === id ? { ...t, isLocked: !t.isLocked } : t,
     );
     set({ tabs: nextTabs });
     debouncedSaveSession(nextTabs, activeTabId);
@@ -360,7 +383,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     const keep = tabs.filter((t) => t.id === id || t.isPinned);
-    const nextRecent = [id, ...keep.filter((t) => t.id !== id).map((t) => t.id)];
+    const nextRecent = [
+      id,
+      ...keep.filter((t) => t.id !== id).map((t) => t.id),
+    ];
     set({ tabs: keep, activeTabId: id, recentTabIds: nextRecent });
     debouncedSaveSession(keep, id);
   },
@@ -393,7 +419,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nextActiveId = id;
     }
 
-    const nextRecent = (get().recentTabIds || []).filter((tid) => !rightTabIds.has(tid));
+    const nextRecent = (get().recentTabIds || []).filter(
+      (tid) => !rightTabIds.has(tid),
+    );
     set({ tabs: keep, activeTabId: nextActiveId, recentTabIds: nextRecent });
     debouncedSaveSession(keep, nextActiveId);
   },
@@ -414,14 +442,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     const keepIds = new Set(keep.map((t) => t.id));
-    const nextRecent = (get().recentTabIds || []).filter((tid) => keepIds.has(tid));
+    const nextRecent = (get().recentTabIds || []).filter((tid) =>
+      keepIds.has(tid),
+    );
     set({ tabs: keep, activeTabId: nextActiveId, recentTabIds: nextRecent });
     debouncedSaveSession(keep, nextActiveId);
   },
 
   closeAllTabs: () => {
     const freshTab = createInitialTab("new 1");
-    set({ tabs: [freshTab], activeTabId: freshTab.id, recentTabIds: [freshTab.id] });
+    set({
+      tabs: [freshTab],
+      activeTabId: freshTab.id,
+      recentTabIds: [freshTab.id],
+    });
     debouncedSaveSession([freshTab], freshTab.id);
   },
 
@@ -461,7 +495,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         nextActiveId = freshTab.id;
       }
       const keepIds = new Set(keep.map((t) => t.id));
-      const nextRecent = (get().recentTabIds || []).filter((tid) => keepIds.has(tid));
+      const nextRecent = (get().recentTabIds || []).filter((tid) =>
+        keepIds.has(tid),
+      );
       set({ tabs: keep, activeTabId: nextActiveId, recentTabIds: nextRecent });
       debouncedSaveSession(keep, nextActiveId);
     }
@@ -485,7 +521,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
     const nextRecent = (get().recentTabIds || []).filter((id) => id !== tabId);
-    set({ tabs: remainingTabs, activeTabId: nextActiveId, recentTabIds: nextRecent });
+    set({
+      tabs: remainingTabs,
+      activeTabId: nextActiveId,
+      recentTabIds: nextRecent,
+    });
     debouncedSaveSession(remainingTabs, nextActiveId);
 
     // 2. Append tab to target workspace in workspaceStore
@@ -500,7 +540,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       await saveWorkspace(updatedTargetWs);
       useWorkspaceStore.setState({
         workspaces: wsStore.workspaces.map((w) =>
-          w.id === targetWorkspaceId ? updatedTargetWs : w
+          w.id === targetWorkspaceId ? updatedTargetWs : w,
         ),
       });
     }
@@ -508,7 +548,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setActiveTab: (id: string) => {
     const { tabs, activeTabId, recentTabIds } = get();
-    const nextRecent = [id, ...(recentTabIds || []).filter((tabId) => tabId !== id)];
+    const nextRecent = [
+      id,
+      ...(recentTabIds || []).filter((tabId) => tabId !== id),
+    ];
     if (id === activeTabId) {
       set({ recentTabIds: nextRecent });
       return;
@@ -845,7 +888,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   reopenClosedFile: async () => {
-    const { tab, remainingClosed } = await RecentFilesService.reopenLastClosedFile();
+    const { tab, remainingClosed } =
+      await RecentFilesService.reopenLastClosedFile();
     set({ closedFilesStack: remainingClosed });
     if (!tab) return;
 
@@ -888,7 +932,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const recents = await RecentFilesService.addRecentFile(entry.handle, entry.name);
+    const recents = await RecentFilesService.addRecentFile(
+      entry.handle,
+      entry.name,
+    );
     const nextTabs = [...tabs, tab];
     set({ tabs: nextTabs, activeTabId: tab.id, recentFiles: recents });
     debouncedSaveSession(nextTabs, tab.id);

@@ -5,15 +5,24 @@ import type {
   ScriptMetadata,
 } from "../../features/scripts/types/script.types";
 import type { WorkspaceSession } from "../types/workspace.types";
+import {
+  encryptWithDeviceKey,
+  decryptWithDeviceKey,
+  isDeviceEncryptedRecord,
+} from "./cryptoUtils";
 
 const DB_NAME = "TextEditorDB";
-const DB_VERSION = 4;
+const DB_VERSION = 7;
 const STORE_NAME = "tabs_session";
 const SETTINGS_STORE = "settings";
 const SCRIPT_FUNCTIONS_STORE = "script_functions";
 const SCRIPTS_STORE = "scripts";
 const WORKSPACES_STORE = "workspaces";
 const RECENT_FILES_STORE = "recent_files";
+const CLOUD_AUTH_STORE = "cloud_auth";
+const DEVICE_KEYS_STORE = "device_keys";
+const FOLDER_HANDLES_STORE = "folder-handles";
+const DEVICE_AUTH_KEY_ID = "auth_storage_key";
 
 interface SessionRecord {
   tabs: FileTab[];
@@ -21,6 +30,7 @@ interface SessionRecord {
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
+let cachedDeviceKey: CryptoKey | null = null;
 
 function getDB() {
   if (!dbPromise) {
@@ -44,10 +54,52 @@ function getDB() {
         if (!db.objectStoreNames.contains(RECENT_FILES_STORE)) {
           db.createObjectStore(RECENT_FILES_STORE);
         }
+        if (!db.objectStoreNames.contains(CLOUD_AUTH_STORE)) {
+          db.createObjectStore(CLOUD_AUTH_STORE);
+        }
+        if (!db.objectStoreNames.contains(DEVICE_KEYS_STORE)) {
+          db.createObjectStore(DEVICE_KEYS_STORE);
+        }
+        if (!db.objectStoreNames.contains(FOLDER_HANDLES_STORE)) {
+          db.createObjectStore(FOLDER_HANDLES_STORE);
+        }
       },
     });
   }
   return dbPromise;
+}
+
+/**
+ * Retrieves or generates an internal, non-extractable AES-GCM 256-bit CryptoKey.
+ * Marked as extractable: false so raw key bytes cannot be inspected via console.
+ */
+async function getOrCreateDeviceKey(): Promise<CryptoKey | null> {
+  if (cachedDeviceKey) return cachedDeviceKey;
+  try {
+    const db = await getDB();
+    const existing = await db.get(DEVICE_KEYS_STORE, DEVICE_AUTH_KEY_ID);
+    if (existing instanceof CryptoKey) {
+      cachedDeviceKey = existing;
+      return existing;
+    }
+
+    // Generate non-extractable key
+    const newKey = await window.crypto.subtle.generateKey(
+      {
+        name: "AES-GCM",
+        length: 256,
+      },
+      false, // non-extractable!
+      ["encrypt", "decrypt"],
+    );
+
+    await db.put(DEVICE_KEYS_STORE, newKey, DEVICE_AUTH_KEY_ID);
+    cachedDeviceKey = newKey;
+    return newKey;
+  } catch (error) {
+    console.warn("Web Crypto device key generation unavailable, fallback to standard store", error);
+    return null;
+  }
 }
 
 export async function saveSessionTabs(
@@ -256,3 +308,105 @@ export async function clearRecentFilesStorage(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Cloud Storage Auth Data
+// ---------------------------------------------------------------------------
+
+export async function loadCloudAuth<T>(key: string): Promise<T | null> {
+  try {
+    const db = await getDB();
+    const rawResult = await db.get(CLOUD_AUTH_STORE, key);
+    if (!rawResult) return null;
+
+    if (isDeviceEncryptedRecord(rawResult)) {
+      const deviceKey = await getOrCreateDeviceKey();
+      if (!deviceKey) {
+        throw new Error("Unable to retrieve device decryption key.");
+      }
+      const decryptedJson = await decryptWithDeviceKey(rawResult, deviceKey);
+      return JSON.parse(decryptedJson) as T;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn(`Failed to load or decrypt cloud auth for "${key}" from IndexedDB`, error);
+    return null;
+  }
+}
+
+export async function saveCloudAuth<T>(key: string, data: T): Promise<void> {
+  try {
+    const db = await getDB();
+    const deviceKey = await getOrCreateDeviceKey();
+
+    if (deviceKey) {
+      // Encrypt sensitive auth tokens before saving into IndexedDB
+      const serialized = JSON.stringify(data);
+      const encryptedRecord = await encryptWithDeviceKey(serialized, deviceKey);
+      await db.put(CLOUD_AUTH_STORE, encryptedRecord, key);
+    } else {
+      // Fallback if Web Crypto is unavailable
+      await db.put(CLOUD_AUTH_STORE, data, key);
+    }
+  } catch (error) {
+    console.warn(`Failed to encrypt and save cloud auth for "${key}" to IndexedDB`, error);
+  }
+}
+
+export async function deleteCloudAuth(key: string): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.delete(CLOUD_AUTH_STORE, key);
+  } catch (error) {
+    console.warn(`Failed to delete cloud auth for "${key}" from IndexedDB`, error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Folder Handles — native FileSystemDirectoryHandle storage via structured clone
+// ---------------------------------------------------------------------------
+
+/**
+ * Saves a FileSystemDirectoryHandle for a workspace.
+ * IDB stores FileSystemHandle natively via structured clone (not JSON).
+ */
+export async function saveFolderHandle(
+  workspaceId: string,
+  handle: FileSystemDirectoryHandle,
+): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.put(FOLDER_HANDLES_STORE, handle, workspaceId);
+  } catch (error) {
+    console.warn(`Failed to save folder handle for workspace "${workspaceId}"`, error);
+  }
+}
+
+/**
+ * Loads a previously saved FileSystemDirectoryHandle for a workspace.
+ * Returns null if not found or if the browser session no longer has the handle.
+ */
+export async function loadFolderHandle(
+  workspaceId: string,
+): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    const db = await getDB();
+    const handle = await db.get(FOLDER_HANDLES_STORE, workspaceId);
+    return handle instanceof FileSystemDirectoryHandle ? handle : null;
+  } catch (error) {
+    console.warn(`Failed to load folder handle for workspace "${workspaceId}"`, error);
+    return null;
+  }
+}
+
+/**
+ * Removes the stored FileSystemDirectoryHandle for a workspace (on unlink).
+ */
+export async function deleteFolderHandle(workspaceId: string): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.delete(FOLDER_HANDLES_STORE, workspaceId);
+  } catch (error) {
+    console.warn(`Failed to delete folder handle for workspace "${workspaceId}"`, error);
+  }
+}

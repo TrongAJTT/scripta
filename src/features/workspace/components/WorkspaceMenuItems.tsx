@@ -1,19 +1,34 @@
 import React from "react";
-import { Folder, Plus, Edit2, Trash2, Check } from "lucide-react";
+import {
+  Plus,
+  Info,
+  Trash2,
+  Check,
+  Cloud,
+  FolderOpen,
+  FolderDown,
+  Save,
+  HardDrive,
+} from "lucide-react";
 import { useWorkspaceStore } from "../store/workspaceStore";
 import {
   promptCreateWorkspace,
-  promptRenameWorkspace,
   promptDeleteWorkspace,
 } from "../services/workspaceService";
+import { workspaceFolderService } from "../services/workspaceFolderService";
 import { DropdownMenu } from "../../../shared/components/DropdownMenu";
+import { dialog } from "../../../shared/dialog/dialogStore";
 
 export interface WorkspaceMenuItemsProps {
   onAfterSelect?: () => void;
+  onOpenWorkspaceInfo?: () => void;
 }
+
+const isFSASupported = "showDirectoryPicker" in window;
 
 export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
   onAfterSelect,
+  onOpenWorkspaceInfo,
 }) => {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -22,24 +37,42 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
   const activeWorkspace =
     workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
 
+  const isLinked = Boolean(
+    activeWorkspace?.folderLinkedAt && activeWorkspace?.folderName,
+  );
+
+  const handleSaveWorkspace = async () => {
+    if (!activeWorkspace) return;
+    onAfterSelect?.();
+    const result = await workspaceFolderService.saveWorkspace(
+      activeWorkspace.id,
+    );
+    if (result === "no-folder") {
+      // No folder linked — open picker to save as folder
+      await workspaceFolderService.saveWorkspaceToFolder(activeWorkspace);
+    } else if (result === "permission-denied") {
+      await dialog.alert({
+        title: "Permission Denied",
+        message:
+          "Scripta was denied write access to the linked folder. Please try again or re-link the folder from Workspace Information.",
+        variant: "warning",
+      });
+    }
+  };
+
   return (
     <>
-      {/* <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-subtle)] mb-1 flex items-center justify-between">
-        <span>Workspaces ({workspaces.length})</span>
-      </div> */}
-
       {/* List of Workspaces */}
       {workspaces.map((ws) => {
         const isActive = ws.id === activeWorkspaceId;
+        const isSynced = Boolean(ws.lastSyncedAt);
+        const wsIsLinked = Boolean(ws.folderLinkedAt && ws.folderName);
+
         return (
           <DropdownMenu.Item
             key={ws.id}
             icon={
-              isActive ? (
-                <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
-              ) : (
-                <Folder className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              )
+              isActive && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
             }
             label={
               <div className="flex items-center justify-between w-full pr-1">
@@ -52,9 +85,28 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
                 >
                   {ws.name}
                 </span>
-                <span className="text-[10px] text-[var(--text-muted)] font-mono ml-2">
-                  {ws.tabs.length} {ws.tabs.length === 1 ? "tab" : "tabs"}
-                </span>
+                <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                  {isSynced && (
+                    <span
+                      title={
+                        ws.lastSyncedProvider
+                          ? `Synced to ${ws.lastSyncedProvider === "dropbox" ? "Dropbox" : "GitHub"}`
+                          : "Synced to Cloud"
+                      }
+                      className="inline-flex items-center"
+                    >
+                      <Cloud className="w-3 h-3 text-[var(--accent-blue)] shrink-0" />
+                    </span>
+                  )}
+                  {wsIsLinked && (
+                    <span title={`Linked to folder: ${ws.folderName}`}>
+                      <FolderOpen className="w-3 h-3 text-[var(--accent-yellow)] shrink-0" />
+                    </span>
+                  )}
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                    {ws.tabs.length} {ws.tabs.length === 1 ? "tab" : "tabs"}
+                  </span>
+                </div>
               </div>
             }
             onSelect={() => {
@@ -67,7 +119,7 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
 
       <DropdownMenu.Separator />
 
-      {/* Actions */}
+      {/* Create new workspace */}
       <DropdownMenu.Item
         icon={<Plus className="w-3.5 h-3.5 text-[var(--accent)]" />}
         label="New Workspace..."
@@ -76,23 +128,52 @@ export const WorkspaceMenuItems: React.FC<WorkspaceMenuItemsProps> = ({
           onAfterSelect?.();
         }}
       />
+
       {activeWorkspace && (
         <>
+          {/* View Workspace Information */}
           <DropdownMenu.Item
-            icon={<Edit2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
-            label="Rename Current..."
+            icon={<Info className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+            label="View Information"
+            commandId="workspace.info"
             onSelect={() => {
-              void promptRenameWorkspace(
-                activeWorkspace.id,
-                activeWorkspace.name,
-              );
+              if (onOpenWorkspaceInfo) {
+                onOpenWorkspaceInfo();
+              } else {
+                window.dispatchEvent(
+                  new CustomEvent("open-workspace-info-modal"),
+                );
+              }
               onAfterSelect?.();
             }}
           />
+
+          {/* Save Workspace — Alt+S */}
+          <DropdownMenu.Item
+            icon={
+              isLinked ? (
+                <Save className="w-3.5 h-3.5 text-[var(--accent)]" />
+              ) : isFSASupported ? (
+                <FolderDown className="w-3.5 h-3.5 text-[var(--accent)]" />
+              ) : (
+                <HardDrive className="w-3.5 h-3.5 text-[var(--accent)]" />
+              )
+            }
+            label={
+              isLinked
+                ? `Save to "${activeWorkspace.folderName}"`
+                : isFSASupported
+                  ? "Save Workspace..."
+                  : "Download as ZIP"
+            }
+            commandId="workspace.save"
+            onSelect={() => void handleSaveWorkspace()}
+          />
+
+          {/* Delete — only if more than 1 workspace */}
           {workspaces.length > 1 && (
             <DropdownMenu.Item
-              danger
-              icon={<Trash2 className="w-3.5 h-3.5" />}
+              icon={<Trash2 className="w-3.5 h-3.5" color="red" />}
               label="Delete Current..."
               onSelect={() => {
                 void promptDeleteWorkspace(

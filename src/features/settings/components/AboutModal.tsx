@@ -17,6 +17,21 @@ import {
 } from "../../../core/constants/app";
 import { isRunningStandalone } from "../services/pwaInstallService";
 
+const libs: string[] = [
+  "CodeMirror 6",
+  "React 19",
+  "Zustand",
+  "Marked",
+  "KaTeX",
+  "Mermaid",
+  "DOMPurify",
+  "dnd-kit",
+  "Tailwind CSS",
+  "Lucide Icons",
+  "idb",
+  "fflate",
+];
+
 interface AboutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -142,28 +157,15 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           <div className="text-[11px] font-semibold text-[var(--text-highlight)] uppercase tracking-wider">
             Open Source Libraries
           </div>
-          <div className="text-xs text-[var(--text-muted)] leading-relaxed flex flex-wrap gap-x-3 gap-y-1">
-            <span>CodeMirror 6</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>React 19</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>Zustand</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>Marked</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>KaTeX</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>Mermaid</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>DOMPurify</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>dnd-kit</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>Tailwind CSS</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>Lucide Icons</span>
-            <span className="text-[var(--border-color)]">•</span>
-            <span>idb</span>
+          <div className="text-xs text-[var(--text-muted)] leading-relaxed flex flex-wrap gap-x-1.5 gap-y-1">
+            {libs.map((lib, index) => (
+              <>
+                <span>{lib}</span>
+                {index !== libs.length - 1 && (
+                  <span className="text-[var(--border-color)]">•</span>
+                )}
+              </>
+            ))}
           </div>
         </div>
 

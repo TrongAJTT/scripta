@@ -12,12 +12,14 @@ import {
   Trash2,
   Layout,
   Check,
+  PencilLine,
 } from "lucide-react";
 import { useEditorStore } from "../store";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
 import type { FileTab, TabBarPosition } from "../../../core/types/file.types";
 import { TAB_BAR_POSITION_OPTIONS } from "../../../core/constants/tabBarPositions";
 import { ContextMenu } from "../../../shared/components/ContextMenu";
+import { dialog } from "../../../shared/dialog/dialogStore";
 
 export interface TabContextMenuProps {
   tab: FileTab;
@@ -34,11 +36,14 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 }) => {
   const togglePinTab = useEditorStore((s) => s.togglePinTab);
   const toggleLockTab = useEditorStore((s) => s.toggleLockTab);
+  const renameTab = useEditorStore((s) => s.renameTab);
   const closeTab = useEditorStore((s) => s.closeTab);
   const closeOtherTabs = useEditorStore((s) => s.closeOtherTabs);
   const closeToRightTabs = useEditorStore((s) => s.closeToRightTabs);
   const closeSavedTabs = useEditorStore((s) => s.closeSavedTabs);
-  const closeAllTabsWithPrompt = useEditorStore((s) => s.closeAllTabsWithPrompt);
+  const closeAllTabsWithPrompt = useEditorStore(
+    (s) => s.closeAllTabsWithPrompt,
+  );
   const moveTabToWorkspace = useEditorStore((s) => s.moveTabToWorkspace);
   const tabBarPosition = useEditorStore((s) => s.settings.tabBarPosition);
   const updateSettings = useEditorStore((s) => s.updateSettings);
@@ -51,7 +56,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
     <ContextMenu x={x} y={y} onClose={onClose}>
       {/* 1. Pin / Unpin */}
       <ContextMenu.Item
-        label={tab.isPinned ? "Unpin Tab" : "Pin Tab"}
+        label={tab.isPinned ? "Unpin" : "Pin"}
         icon={
           tab.isPinned ? (
             <PinOff className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />
@@ -64,7 +69,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 
       {/* 2. Lock / Unlock */}
       <ContextMenu.Item
-        label={tab.isLocked ? "Unlock File" : "Lock File (Read-Only)"}
+        label={tab.isLocked ? "Unlock" : "Lock (Read-Only)"}
         icon={
           tab.isLocked ? (
             <Unlock className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
@@ -75,10 +80,35 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
         onSelect={() => toggleLockTab(tab.id)}
       />
 
-      {/* 3. Move to Workspace Submenu */}
+      {/* 3. Rename tab */}
+      <ContextMenu.Item
+        label="Rename"
+        icon={<PencilLine className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+        onSelect={async () => {
+          const newName = await dialog.prompt({
+            title: "Rename Tab",
+            message: "Enter a new name for the tab",
+            initialValue: tab.name,
+            validate: (value) => {
+              if (value.trim().length === 0) {
+                return "Name cannot be empty";
+              }
+              return null;
+            },
+          });
+          const trimmedName = newName?.trim();
+          if (trimmedName) {
+            renameTab(tab.id, trimmedName);
+          }
+        }}
+      />
+
+      {/* 4. Move to Workspace Submenu */}
       <ContextMenu.Sub
         label="Move to Workspace"
-        icon={<FolderSymlink className="w-3.5 h-3.5 text-[var(--accent-purple)]" />}
+        icon={
+          <FolderSymlink className="w-3.5 h-3.5 text-[var(--accent-purple)]" />
+        }
       >
         {otherWorkspaces.length === 0 ? (
           <div className="px-3 py-1.5 text-[11px] text-[var(--text-muted)] italic">
@@ -99,7 +129,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 
       <ContextMenu.Separator />
 
-      {/* 4. Close Tab */}
+      {/* 5. Close Tab */}
       <ContextMenu.Item
         label="Close"
         icon={<X className="w-3.5 h-3.5 text-[var(--accent-red)]" />}
@@ -107,28 +137,30 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
         onSelect={() => closeTab(tab.id)}
       />
 
-      {/* 5. Close Others */}
+      {/* 6. Close Others */}
       <ContextMenu.Item
         label="Close Others"
         icon={<XCircle className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
         onSelect={() => void closeOtherTabs(tab.id)}
       />
 
-      {/* 6. Close to the Right */}
+      {/* 7. Close to the Right */}
       <ContextMenu.Item
         label="Close to the Right"
-        icon={<ArrowRightToLine className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+        icon={
+          <ArrowRightToLine className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+        }
         onSelect={() => void closeToRightTabs(tab.id)}
       />
 
-      {/* 7. Close Saved */}
+      {/* 8. Close Saved */}
       <ContextMenu.Item
         label="Close Saved"
         icon={<FileCheck2 className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
         onSelect={() => closeSavedTabs()}
       />
 
-      {/* 8. Close All */}
+      {/* 9. Close All */}
       <ContextMenu.Item
         label="Close All"
         icon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
@@ -138,7 +170,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 
       <ContextMenu.Separator />
 
-      {/* 9. Tab Bar Position Submenu */}
+      {/* 10. Tab Bar Position Submenu */}
       <ContextMenu.Sub
         label="Tab Bar Position"
         icon={<Layout className="w-3.5 h-3.5 text-[var(--accent)]" />}
@@ -151,11 +183,17 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
               label={
                 <span className="flex items-center justify-between w-full">
                   <span>{pos.shortLabel || pos.label}</span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 ml-2" />}
+                  {isSelected && (
+                    <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 ml-2" />
+                  )}
                 </span>
               }
               icon={pos.icon}
-              className={isSelected ? "text-[var(--accent)] font-medium bg-[var(--accent)]/10" : ""}
+              className={
+                isSelected
+                  ? "text-[var(--accent)] font-medium bg-[var(--accent)]/10"
+                  : ""
+              }
               onSelect={() => {
                 updateSettings({ tabBarPosition: pos.id as TabBarPosition });
               }}
