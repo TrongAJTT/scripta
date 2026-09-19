@@ -6,6 +6,7 @@ import { DropdownMenu } from "../../../shared/components/DropdownMenu";
 
 export interface WorkspaceFolderSyncMenuItemsProps {
   onAfterSelect?: () => void;
+  showIcon?: boolean;
 }
 
 const isFSASupported = "showDirectoryPicker" in window;
@@ -18,7 +19,7 @@ const isFSASupported = "showDirectoryPicker" in window;
  */
 export const WorkspaceFolderSyncMenuItems: React.FC<
   WorkspaceFolderSyncMenuItemsProps
-> = ({ onAfterSelect }) => {
+> = ({ onAfterSelect, showIcon = true }) => {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeWorkspace =
@@ -29,7 +30,9 @@ export const WorkspaceFolderSyncMenuItems: React.FC<
       {/* Open Folder as Workspace — Alt+0 */}
       <DropdownMenu.Item
         icon={
-          <FolderOpen className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />
+          showIcon && (
+            <FolderOpen className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />
+          )
         }
         label="Open Folder as Workspace"
         commandId="workspace.openFolder"
@@ -42,11 +45,12 @@ export const WorkspaceFolderSyncMenuItems: React.FC<
       {/* Save Workspace as Folder — Alt+Shift+S */}
       <DropdownMenu.Item
         icon={
-          isFSASupported ? (
+          showIcon &&
+          (isFSASupported ? (
             <FolderDown className="w-3.5 h-3.5 text-[var(--accent-purple)]" />
           ) : (
             <HardDrive className="w-3.5 h-3.5 text-[var(--accent-purple)]" />
-          )
+          ))
         }
         label={
           isFSASupported
@@ -64,7 +68,11 @@ export const WorkspaceFolderSyncMenuItems: React.FC<
 
       {/* Cloud Sync & Backup — Alt+Shift+C */}
       <DropdownMenu.Item
-        icon={<Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+        icon={
+          showIcon && (
+            <Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+          )
+        }
         label="Cloud Sync & Backup..."
         commandId="workspace.cloudSync"
         onSelect={() => {

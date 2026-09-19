@@ -61,6 +61,7 @@ import {
   LEGAL_LINKS,
 } from "../../core/constants/app";
 import { WELCOME_MD_CONTENT } from "../../core/data/defaultDocuments";
+import { ConvertCaseMenuItems } from "../../features/editor/components/ConvertCaseMenuItems";
 
 export interface MenuBarProps {
   onOpenPreferences?: () => void;
@@ -400,31 +401,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
 
         {/* Convert Case */}
         <DropdownMenu.Sub label="Convert Case to">
-          <DropdownMenu.Item
-            label="UPPERCASE"
-            commandId="edit.toUpperCase"
-            onSelect={editorCmds.toUpperCase}
-          />
-          <DropdownMenu.Item
-            label="lowercase"
-            commandId="edit.toLowerCase"
-            onSelect={editorCmds.toLowerCase}
-          />
-          <DropdownMenu.Item
-            label="Proper Case (Blend)"
-            commandId="edit.toProperCase"
-            onSelect={editorCmds.toProperCase}
-          />
-          <DropdownMenu.Item
-            label="Title Case"
-            commandId="edit.toTitleCase"
-            onSelect={editorCmds.toTitleCase}
-          />
-          <DropdownMenu.Item
-            label="iNVERT cASE"
-            commandId="edit.invertCase"
-            onSelect={editorCmds.invertCase}
-          />
+          <ConvertCaseMenuItems editorCmds={editorCmds} />
         </DropdownMenu.Sub>
 
         {/* Line Operations Submenu */}

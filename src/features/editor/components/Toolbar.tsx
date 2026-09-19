@@ -49,6 +49,7 @@ import {
   shareApp,
   copyAppLink,
 } from "../services/shareService";
+import { ConvertCaseMenuItems } from "./ConvertCaseMenuItems";
 
 export const Toolbar: React.FC = () => {
   const tabs = useEditorStore((s) => s.tabs);
@@ -327,31 +328,7 @@ export const Toolbar: React.FC = () => {
               </button>
             }
           >
-            <DropdownMenu.Item
-              label="UPPERCASE"
-              commandId="edit.toUpperCase"
-              onSelect={editorCmds.toUpperCase}
-            />
-            <DropdownMenu.Item
-              label="lowercase"
-              commandId="edit.toLowerCase"
-              onSelect={editorCmds.toLowerCase}
-            />
-            <DropdownMenu.Item
-              label="Proper Case (Blend)"
-              commandId="edit.toProperCase"
-              onSelect={editorCmds.toProperCase}
-            />
-            <DropdownMenu.Item
-              label="Title Case"
-              commandId="edit.toTitleCase"
-              onSelect={editorCmds.toTitleCase}
-            />
-            <DropdownMenu.Item
-              label="iNVERT cASE"
-              commandId="edit.invertCase"
-              onSelect={editorCmds.invertCase}
-            />
+            <ConvertCaseMenuItems editorCmds={editorCmds} />
           </DropdownMenu>
         </div>
 
@@ -554,6 +531,7 @@ export const Toolbar: React.FC = () => {
                 )}
               </button>
             }
+            className="w-[60vw]"
           >
             {/* Lock / Unlock active file on mobile */}
             {activeTab && (
@@ -623,40 +601,14 @@ export const Toolbar: React.FC = () => {
               icon={
                 <CaseSensitive className="w-3.5 h-3.5 text-[var(--accent-purple)]" />
               }
-              alignGutter
             >
-              <DropdownMenu.Item
-                label="UPPERCASE"
-                commandId="edit.toUpperCase"
-                onSelect={editorCmds.toUpperCase}
-              />
-              <DropdownMenu.Item
-                label="lowercase"
-                commandId="edit.toLowerCase"
-                onSelect={editorCmds.toLowerCase}
-              />
-              <DropdownMenu.Item
-                label="Proper Case (Blend)"
-                commandId="edit.toProperCase"
-                onSelect={editorCmds.toProperCase}
-              />
-              <DropdownMenu.Item
-                label="Title Case"
-                commandId="edit.toTitleCase"
-                onSelect={editorCmds.toTitleCase}
-              />
-              <DropdownMenu.Item
-                label="iNVERT cASE"
-                commandId="edit.invertCase"
-                onSelect={editorCmds.invertCase}
-              />
+              <ConvertCaseMenuItems editorCmds={editorCmds} />
             </DropdownMenu.Sub>
 
             {/* Bookmarks Submenu (Mobile) */}
             <DropdownMenu.Sub
               label={`Bookmarks${editorCmds.getBookmarks().length > 0 ? ` (${editorCmds.getBookmarks().length})` : ""}`}
               icon={<Bookmark className="w-3.5 h-3.5 text-[var(--accent)]" />}
-              alignGutter
             >
               <BookmarkMenuItems editorCmds={editorCmds} />
             </DropdownMenu.Sub>
@@ -686,9 +638,8 @@ export const Toolbar: React.FC = () => {
               icon={
                 <FolderGit2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
               }
-              alignGutter
             >
-              <WorkspaceFolderSyncMenuItems />
+              <WorkspaceFolderSyncMenuItems showIcon={false} />
             </DropdownMenu.Sub>
 
             {/* Appearance / Theme Accordion Submenu */}
