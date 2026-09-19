@@ -1,25 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { Search, RotateCcw, Keyboard, AlertTriangle, AlertCircle, Check, Trash2 } from 'lucide-react';
-import type { CommandId, Keybinding } from '../../../core/commands/types';
-import { COMMANDS, keybindingToString, checkBrowserConflict } from '../../../core/commands/registry';
-import { useKeybindingStore } from '../../../core/commands/keybindingStore';
-import { ModalWrapper } from '../../../shared/components/ModalWrapper';
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  RotateCcw,
+  Keyboard,
+  AlertTriangle,
+  AlertCircle,
+  Check,
+  Trash2,
+} from "lucide-react";
+import type { CommandId, Keybinding } from "../../../core/commands/types";
+import {
+  COMMANDS,
+  keybindingToString,
+  checkBrowserConflict,
+} from "../../../core/commands/registry";
+import { useKeybindingStore } from "../../../core/commands/keybindingStore";
+import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 
 interface ShortcutMapperModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen, onClose }) => {
+export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  const overrides = useKeybindingStore((s) => s.overrides);
   const getKeybinding = useKeybindingStore((s) => s.getKeybinding);
   const setKeybinding = useKeybindingStore((s) => s.setKeybinding);
   const resetKeybinding = useKeybindingStore((s) => s.resetKeybinding);
   const resetAll = useKeybindingStore((s) => s.resetAll);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [editingCommandId, setEditingCommandId] = useState<CommandId | null>(null);
-  const [capturedKeybinding, setCapturedKeybinding] = useState<Keybinding | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [editingCommandId, setEditingCommandId] = useState<CommandId | null>(
+    null,
+  );
+  const [capturedKeybinding, setCapturedKeybinding] =
+    useState<Keybinding | null>(null);
   const [conflictWarning, setConflictWarning] = useState<string | null>(null);
 
   // Capture keystrokes when editing
@@ -31,16 +50,18 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
       e.stopPropagation();
 
       // Ignore pure modifier presses
-      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
         return;
       }
 
-      // Modifier validation: require Alt or Alt+Shift / Alt+Ctrl
-      const hasAlt = e.altKey;
+      // Modifier validation: require at least one modifier OR a Function key (F1-F12)
+      const hasModifier = e.ctrlKey || e.altKey || e.shiftKey || e.metaKey;
       const isFunctionKey = /^F[1-9]|F1[0-2]$/.test(e.key);
 
-      if (!hasAlt && !isFunctionKey) {
-        setConflictWarning('⚠️ Shortcuts must include the Alt modifier (e.g. Alt+S, Alt+Shift+S) to avoid browser collisions!');
+      if (!hasModifier && !isFunctionKey) {
+        setConflictWarning(
+          "⚠️ Shortcuts must include at least one modifier (Ctrl, Alt, Shift) or be a Function key (F1-F12).",
+        );
         return;
       }
 
@@ -55,37 +76,46 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
       setCapturedKeybinding(newKb);
 
       // Check conflict with other commands
-      const conflictWith = (Object.keys(COMMANDS) as CommandId[]).find((cmdId) => {
-        if (cmdId === editingCommandId) return false;
-        const existing = getKeybinding(cmdId);
-        if (!existing) return false;
-        return (
-          existing.key === newKb.key &&
-          existing.alt === newKb.alt &&
-          existing.ctrl === newKb.ctrl &&
-          existing.shift === newKb.shift &&
-          existing.meta === newKb.meta
-        );
-      });
+      const conflictWith = (Object.keys(COMMANDS) as CommandId[]).find(
+        (cmdId) => {
+          if (cmdId === editingCommandId) return false;
+          const existing = getKeybinding(cmdId);
+          if (!existing) return false;
+          return (
+            existing.key === newKb.key &&
+            existing.alt === newKb.alt &&
+            existing.ctrl === newKb.ctrl &&
+            existing.shift === newKb.shift &&
+            existing.meta === newKb.meta
+          );
+        },
+      );
 
       if (conflictWith) {
-        setConflictWarning(`Conflicts with command "${COMMANDS[conflictWith].label}"!`);
+        setConflictWarning(
+          `Conflicts with command "${COMMANDS[conflictWith].label}"!`,
+        );
       } else {
         const browserWarning = checkBrowserConflict(newKb);
         setConflictWarning(browserWarning);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [editingCommandId, getKeybinding]);
 
-  const categories = ['All', 'File', 'Edit', 'View', 'Scripts', 'Settings'];
+  const categories = ["All", "File", "Edit", "View", "Scripts", "Settings"];
   const allCommands = Object.values(COMMANDS);
 
   const filteredCommands = allCommands.filter((cmd) => {
-    const matchesCategory = activeCategory === 'All' || cmd.category === activeCategory;
-    const currentKb = getKeybinding(cmd.id);
+    const matchesCategory =
+      activeCategory === "All" || cmd.category === activeCategory;
+    // Read from overrides or default to trigger reactivity and keep selector active
+    const currentKb = Object.prototype.hasOwnProperty.call(overrides, cmd.id)
+      ? (overrides[cmd.id] ?? null)
+      : (cmd.defaultKeybinding ?? null);
     const kbStr = keybindingToString(currentKb).toLowerCase();
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch =
@@ -125,11 +155,11 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
       isOpen={isOpen}
       onClose={onClose}
       title="Shortcut Mapper"
-      subtitle="Customize keyboard shortcuts. Uses Alt-based combinations by default to prevent browser conflicts."
+      subtitle="Customize keyboard shortcuts. Supports Ctrl, Alt, Shift, and Function key combinations."
       icon={<Keyboard className="w-5 h-5" />}
       badge={
         <span className="text-[10px] px-2 py-0.5 rounded-sm bg-[var(--accent)]/15 text-[var(--accent)] font-medium">
-          Alt-based Modifier
+          Customizable
         </span>
       }
       footer={
@@ -172,8 +202,8 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
               onClick={() => setActiveCategory(cat)}
               className={`px-2.5 py-1 text-xs rounded-sm font-semibold transition-colors ${
                 activeCategory === cat
-                  ? 'bg-accent text-accent-contrast shadow-2xs'
-                  : 'text-[var(--text-muted)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--text-main)]'
+                  ? "bg-accent text-accent-contrast shadow-2xs"
+                  : "text-[var(--text-muted)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--text-main)]"
               }`}
             >
               {cat}
@@ -194,13 +224,16 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
             const isEditing = editingCommandId === cmd.id;
             const hasDefault = Boolean(cmd.defaultKeybinding);
             const isModified =
-              JSON.stringify(currentKb) !== JSON.stringify(cmd.defaultKeybinding);
+              JSON.stringify(currentKb) !==
+              JSON.stringify(cmd.defaultKeybinding);
 
             return (
               <div
                 key={cmd.id}
                 className={`py-2 flex flex-col gap-2 transition-colors ${
-                  isEditing ? 'bg-[var(--bg-tab-active)]/40 -mx-5 px-5 rounded-xs' : ''
+                  isEditing
+                    ? "bg-[var(--bg-tab-active)]/40 -mx-5 px-5 rounded-xs"
+                    : ""
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -232,7 +265,7 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
                           <Keyboard className="w-3.5 h-3.5 animate-pulse" />
                           {capturedKeybinding
                             ? keybindingToString(capturedKeybinding)
-                            : 'Press key combination...'}
+                            : "Press key combination..."}
                         </div>
 
                         <button
@@ -308,7 +341,7 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({ isOpen
                 {/* Conflict warnings */}
                 {isEditing && conflictWarning && (
                   <div className="flex items-center gap-1.5 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-xs mt-1 animate-fade-in">
-                    {conflictWarning.includes('⚠️') ? (
+                    {conflictWarning.includes("⚠️") ? (
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     ) : (
                       <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
