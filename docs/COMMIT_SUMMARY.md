@@ -7,40 +7,33 @@
 ## 📌 Commit Message
 
 ```text
-feat(shortcuts): enhance Shortcut Mapper reactivity, relax modifier rules, and align defaults
+feat(editor): implement MS Unicode Hex conversion & enhance character actions
 
-- Shortcut Mapper Reactivity:
-  - Subscribed `ShortcutMapperModal` directly to `useKeybindingStore.overrides` state, enabling instant UI updates upon deleting or resetting shortcuts without closing/reopening the dialog.
-  - Dynamically resolved keybindings directly from overrides within command filter lists to ensure smooth reactivity.
+- Unicode Hex Toggle Engine:
+  - Created standalone `UnicodeHexService` implementing bidirectional conversion between Unicode code points and characters modeled.
+  - Converts preceding hex strings (e.g. "2014", "1F600", or optional "U+...") into characters, and vice versa from character back to uppercase hex code point.
+  - Supports non-empty selections, collapsed cursors with backward lookahead, and full surrogate pair handling (emojis and high astral plane symbols).
+  - Registered `edit.toggleUnicodeHex` command bound to `Alt+X` default keybinding.
+  - Added "Toggle Unicode Hex" action item inside the `Edit` menu (MenuBar) while preserving a clean Toolbar.
 
-- Flexible Modifier System:
-  - Removed strict Alt-only enforcement; shortcuts now permit any standard modifier (Ctrl, Alt, Shift, Meta) or standalone Function keys (F1-F12).
-  - Softened browser collision warnings to focus strictly on reserved, non-overridable shortcuts (Ctrl+N, Ctrl+T, Ctrl+W).
-  - Updated Shortcut Mapper modal subtitle and badge indicator to highlight customizable shortcut support.
-
-- Standardized Default Keybindings:
-  - Updated core file commands in `registry.ts` to use conventional desktop standards:
-    - Open File: `Ctrl+O`
-    - Save File: `Ctrl+S`
-    - Save As: `Ctrl+Shift+S`
-    - Find & Replace: `Ctrl+F`
+- Character Modal UX Enhancement:
+  - Added dedicated quick-copy button alongside the insert button for each special character in `InsertCharacterModal`.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Command Registry & Keybinding Definitions (`src/core/commands/`)
+### 1. Unicode Hex Conversion Service (`src/features/editor/`)
 
-- [registry.ts](file:///g:/TextEditor/src/core/commands/registry.ts):
-  - Standardized default shortcuts: `file.open` (`Ctrl+O`), `file.save` (`Ctrl+S`), `file.saveAs` (`Ctrl+Shift+S`), and `edit.findReplace` (`Ctrl+F`).
-  - Refined `checkBrowserConflict` to issue soft warnings specifically for OS/browser-reserved shortcuts (`Ctrl+N`, `Ctrl+T`, `Ctrl+W`) instead of blocking general `Ctrl` combinations.
+- [unicodeHexService.ts](file:///g:/TextEditor/src/features/editor/services/unicodeHexService.ts): Core bidirectional conversion engine supporting both selection-based and cursor lookback conversion with surrogate pair awareness.
+- [editorCommands.ts](file:///g:/TextEditor/src/core/utils/editorCommands.ts): Exported `toggleUnicodeHex` wrapper invoking the service on active `EditorView`.
+- [useEditorCommands.ts](file:///g:/TextEditor/src/features/editor/hooks/useEditorCommands.ts): Integrated `toggleUnicodeHex` into the command execution hook.
+- [InsertCharacterModal.tsx](file:///g:/TextEditor/src/features/editor/components/InsertCharacterModal.tsx): Added an inline Copy button (`handleCopy`) next to the Insert button in the character table.
 
-### 2. Shortcut Mapper Modal (`src/features/settings/`)
+### 2. Command Architecture & Menu Integration (`src/core/`, `src/app/`)
 
-- [ShortcutMapperModal.tsx](file:///g:/TextEditor/src/features/settings/components/ShortcutMapperModal.tsx):
-  - Subscribed to `useKeybindingStore.overrides` to trigger immediate re-renders when shortcuts are deleted or modified.
-  - Relaxed keystroke validation to allow any combination containing at least one modifier (`Ctrl`, `Alt`, `Shift`, `Meta`) or function keys (`F1`–`F12`).
-  - Updated header badge to "Customizable" and refined modal descriptive text.
-
-
+- [types.ts](file:///g:/TextEditor/src/core/commands/types.ts): Added `edit.toggleUnicodeHex` to `CommandId`.
+- [registry.ts](file:///g:/TextEditor/src/core/commands/registry.ts): Registered `edit.toggleUnicodeHex` under the "Edit" category with default keybinding `Alt+X`.
+- [App.tsx](file:///g:/TextEditor/src/App.tsx): Mapped `edit.toggleUnicodeHex` command dispatching `editorCmds.toggleUnicodeHex()` in the global keyboard listener.
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx): Added "Toggle Unicode Hex" menu item inside the `Edit` dropdown menu.

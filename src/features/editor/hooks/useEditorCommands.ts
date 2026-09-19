@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
-import { useEditorView } from '../context/useEditorView';
-import { useEditorStore } from '../../tabs/store';
-import * as cmd from '../../../core/utils/editorCommands';
-import * as bookmarkOps from '../services/bookmarkExtension';
+import { useCallback } from "react";
+import { useEditorView } from "../context/useEditorView";
+import { useEditorStore } from "../../tabs/store";
+import * as cmd from "../../../core/utils/editorCommands";
+import * as bookmarkOps from "../services/bookmarkExtension";
 
 export function useEditorCommands() {
   const { viewRef } = useEditorView();
@@ -11,13 +11,13 @@ export function useEditorCommands() {
   const insertDateTime = useEditorStore((s) => s.insertDateTime);
 
   const runWithView = useCallback(
-    (fn: (view: import('@codemirror/view').EditorView) => boolean | void) => {
+    (fn: (view: import("@codemirror/view").EditorView) => boolean | void) => {
       const view = viewRef.current;
       if (!view) return;
       fn(view);
       view.focus();
     },
-    [viewRef]
+    [viewRef],
   );
 
   return {
@@ -57,15 +57,20 @@ export function useEditorCommands() {
     removeEmptyLines: () => runWithView(cmd.removeEmptyLines),
     removeDuplicateLines: () => runWithView(cmd.removeDuplicateLines),
 
+    // Unicode conversions
+    toggleUnicodeHex: () => runWithView(cmd.toggleUnicodeHex),
+
     // Document operations (Store level)
-    convertLineEnding: (target: 'CRLF' | 'LF') => {
+    convertLineEnding: (target: "CRLF" | "LF") => {
       if (activeTabId) convertLineEnding(activeTabId, target);
     },
-    insertDateTime: (format: 'short' | 'long' = 'short') => {
+    insertDateTime: (format: "short" | "long" = "short") => {
       const now = new Date();
       const text =
-        format === 'short'
-          ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + now.toLocaleDateString()
+        format === "short"
+          ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+            " " +
+            now.toLocaleDateString()
           : now.toLocaleString();
 
       if (viewRef.current) {

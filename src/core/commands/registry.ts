@@ -380,6 +380,18 @@ export const COMMANDS: Record<CommandId, Command> = {
       meta: false,
     },
   },
+  "edit.toggleUnicodeHex": {
+    id: "edit.toggleUnicodeHex",
+    label: "Toggle Unicode Hex",
+    category: "Edit",
+    defaultKeybinding: {
+      key: "KeyX",
+      alt: true,
+      ctrl: false,
+      shift: false,
+      meta: false,
+    },
+  },
 
   // --- View ---
   "view.splitMode": {

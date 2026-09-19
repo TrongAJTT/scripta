@@ -500,6 +500,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             commandId="edit.insertCharacter"
             onSelect={() => onOpenInsertCharacter?.()}
           />
+          <DropdownMenu.Item
+            label="Toggle Unicode Hex"
+            commandId="edit.toggleUnicodeHex"
+            onSelect={editorCmds.toggleUnicodeHex}
+          />
         </DropdownMenu.Sub>
       </DropdownMenu>
 

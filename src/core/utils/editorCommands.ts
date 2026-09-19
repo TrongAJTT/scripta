@@ -1,5 +1,5 @@
-import { EditorSelection } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import { EditorSelection } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 import {
   toggleComment as cmToggleComment,
   toggleBlockComment as cmToggleBlockComment,
@@ -7,8 +7,12 @@ import {
   moveLineDown as cmMoveLineDown,
   undo as cmUndo,
   redo as cmRedo,
-} from '@codemirror/commands';
-import { foldAll as cmFoldAll, unfoldAll as cmUnfoldAll } from '@codemirror/language';
+} from "@codemirror/commands";
+import {
+  foldAll as cmFoldAll,
+  unfoldAll as cmUnfoldAll,
+} from "@codemirror/language";
+import { UnicodeHexService } from "../../features/editor/services/unicodeHexService";
 
 // Re-export CM6 native commands
 export {
@@ -39,7 +43,7 @@ export function duplicateLine(view: EditorView): boolean {
     }
     const line = state.doc.lineAt(range.head);
     return {
-      changes: { from: line.to, insert: '\n' + line.text },
+      changes: { from: line.to, insert: "\n" + line.text },
       range: EditorSelection.cursor(range.head + line.length + 1),
     };
   });
@@ -79,12 +83,14 @@ export function joinLines(view: EditorView): boolean {
   const { state } = view;
   const sel = state.selection.main;
   const startLine = state.doc.lineAt(sel.from);
-  const endLine = state.doc.lineAt(sel.empty ? Math.min(sel.to + 1, state.doc.length) : sel.to);
+  const endLine = state.doc.lineAt(
+    sel.empty ? Math.min(sel.to + 1, state.doc.length) : sel.to,
+  );
 
   if (startLine.number === endLine.number) {
     if (startLine.number >= state.doc.lines) return false;
     const nextLine = state.doc.line(startLine.number + 1);
-    const joined = startLine.text.trimEnd() + ' ' + nextLine.text.trimStart();
+    const joined = startLine.text.trimEnd() + " " + nextLine.text.trimStart();
     view.dispatch({
       changes: { from: startLine.from, to: nextLine.to, insert: joined },
       selection: EditorSelection.cursor(startLine.from + joined.length),
@@ -97,7 +103,7 @@ export function joinLines(view: EditorView): boolean {
   for (let i = startLine.number; i <= endLine.number; i++) {
     lines.push(state.doc.line(i).text.trim());
   }
-  const joined = lines.join(' ');
+  const joined = lines.join(" ");
   view.dispatch({
     changes: { from: startLine.from, to: endLine.to, insert: joined },
     selection: EditorSelection.cursor(startLine.from + joined.length),
@@ -108,7 +114,10 @@ export function joinLines(view: EditorView): boolean {
 /**
  * Helper to transform text in selection or the current word/line.
  */
-function transformSelection(view: EditorView, fn: (text: string) => string): boolean {
+function transformSelection(
+  view: EditorView,
+  fn: (text: string) => string,
+): boolean {
   const { state } = view;
   const changes = state.changeByRange((range) => {
     let from = range.from;
@@ -140,29 +149,38 @@ export function toLowerCase(view: EditorView): boolean {
 
 export function toTitleCase(view: EditorView): boolean {
   return transformSelection(view, (t) =>
-    t.replace(/\b\w+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    t.replace(
+      /\b\w+/g,
+      (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    ),
   );
 }
 
 export function toProperCase(view: EditorView): boolean {
   return transformSelection(view, (t) =>
-    t.replace(/(^\s*|\.\s+)(\w)/g, (_, prefix: string, char: string) => prefix + char.toUpperCase())
+    t.replace(
+      /(^\s*|\.\s+)(\w)/g,
+      (_, prefix: string, char: string) => prefix + char.toUpperCase(),
+    ),
   );
 }
 
 export function invertCase(view: EditorView): boolean {
   return transformSelection(view, (t) =>
     t
-      .split('')
+      .split("")
       .map((c) => (c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()))
-      .join('')
+      .join(""),
   );
 }
 
 /**
  * Helper to transform lines covered by selection or entire document.
  */
-function transformLines(view: EditorView, fn: (lines: string[]) => string[]): boolean {
+function transformLines(
+  view: EditorView,
+  fn: (lines: string[]) => string[],
+): boolean {
   const { state } = view;
   const sel = state.selection.main;
   let startLineNum = 1;
@@ -182,40 +200,47 @@ function transformLines(view: EditorView, fn: (lines: string[]) => string[]): bo
   }
 
   const newLines = fn(lines);
-  const insertText = newLines.join('\n');
+  const insertText = newLines.join("\n");
 
   view.dispatch({
     changes: { from: startLine.from, to: endLine.to, insert: insertText },
-    selection: EditorSelection.range(startLine.from, startLine.from + insertText.length),
+    selection: EditorSelection.range(
+      startLine.from,
+      startLine.from + insertText.length,
+    ),
   });
   return true;
 }
 
 export function sortLinesAscending(view: EditorView): boolean {
-  return transformLines(view, (lines) => [...lines].sort((a, b) => a.localeCompare(b)));
+  return transformLines(view, (lines) =>
+    [...lines].sort((a, b) => a.localeCompare(b)),
+  );
 }
 
 export function sortLinesDescending(view: EditorView): boolean {
-  return transformLines(view, (lines) => [...lines].sort((a, b) => b.localeCompare(a)));
+  return transformLines(view, (lines) =>
+    [...lines].sort((a, b) => b.localeCompare(a)),
+  );
 }
 
 export function sortLinesIntegerAsc(view: EditorView): boolean {
   return transformLines(view, (lines) =>
     [...lines].sort((a, b) => {
-      const numA = parseFloat(a.match(/-?\d+(\.\d+)?/)?.[0] ?? '0');
-      const numB = parseFloat(b.match(/-?\d+(\.\d+)?/)?.[0] ?? '0');
+      const numA = parseFloat(a.match(/-?\d+(\.\d+)?/)?.[0] ?? "0");
+      const numB = parseFloat(b.match(/-?\d+(\.\d+)?/)?.[0] ?? "0");
       return numA - numB;
-    })
+    }),
   );
 }
 
 export function sortLinesIntegerDesc(view: EditorView): boolean {
   return transformLines(view, (lines) =>
     [...lines].sort((a, b) => {
-      const numA = parseFloat(a.match(/-?\d+(\.\d+)?/)?.[0] ?? '0');
-      const numB = parseFloat(b.match(/-?\d+(\.\d+)?/)?.[0] ?? '0');
+      const numA = parseFloat(a.match(/-?\d+(\.\d+)?/)?.[0] ?? "0");
+      const numB = parseFloat(b.match(/-?\d+(\.\d+)?/)?.[0] ?? "0");
       return numB - numA;
-    })
+    }),
   );
 }
 
@@ -232,11 +257,11 @@ export function trimBoth(view: EditorView): boolean {
 }
 
 export function eolToSpace(view: EditorView): boolean {
-  return transformLines(view, (lines) => [lines.join(' ')]);
+  return transformLines(view, (lines) => [lines.join(" ")]);
 }
 
 export function removeEmptyLines(view: EditorView): boolean {
-  return transformLines(view, (lines) => lines.filter((l) => l.trim() !== ''));
+  return transformLines(view, (lines) => lines.filter((l) => l.trim() !== ""));
 }
 
 export function removeDuplicateLines(view: EditorView): boolean {
@@ -257,4 +282,11 @@ export function insertTextAtCursor(view: EditorView, text: string): boolean {
   view.dispatch(changes);
   view.focus();
   return true;
+}
+
+/**
+ * Toggle Unicode Hex code and character at cursor or selection.
+ */
+export function toggleUnicodeHex(view: EditorView): boolean {
+  return UnicodeHexService.toggleUnicodeHex(view);
 }

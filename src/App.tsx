@@ -79,7 +79,9 @@ export const App: React.FC = () => {
   const clearExternalAlert = useEditorStore((s) => s.clearExternalAlert);
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const [dragTargetZone, setDragTargetZone] = useState<"open" | "append">("open");
+  const [dragTargetZone, setDragTargetZone] = useState<"open" | "append">(
+    "open",
+  );
   const dragCounterRef = useRef(0);
   const [isShortcutMapperOpen, setIsShortcutMapperOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -145,15 +147,23 @@ export const App: React.FC = () => {
         { id: "file.save", action: () => void saveCurrentTab() },
         { id: "file.saveAs", action: () => void saveCurrentTabAs() },
         { id: "file.reopenClosed", action: () => void reopenClosedFile() },
-        { id: "file.toggleBookmark", action: () => editorCmds.toggleBookmark() },
+        {
+          id: "file.toggleBookmark",
+          action: () => editorCmds.toggleBookmark(),
+        },
         { id: "file.nextBookmark", action: () => editorCmds.nextBookmark() },
         { id: "file.prevBookmark", action: () => editorCmds.prevBookmark() },
-        { id: "file.clearBookmarks", action: () => editorCmds.clearBookmarks() },
+        {
+          id: "file.clearBookmarks",
+          action: () => editorCmds.clearBookmarks(),
+        },
         {
           id: "file.closeTab",
           action: () => {
             if (!activeTabId) return;
-            const currentTab = useEditorStore.getState().tabs.find((t) => t.id === activeTabId);
+            const currentTab = useEditorStore
+              .getState()
+              .tabs.find((t) => t.id === activeTabId);
             if (currentTab?.isModified) {
               void (async () => {
                 const confirmed = await dialog.confirm({
@@ -220,6 +230,10 @@ export const App: React.FC = () => {
         {
           id: "edit.insertCharacter",
           action: () => setIsInsertCharacterOpen(true),
+        },
+        {
+          id: "edit.toggleUnicodeHex",
+          action: () => editorCmds.toggleUnicodeHex(),
         },
         {
           id: "view.toggleWordWrap",
@@ -354,7 +368,10 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDrop = async (e: React.DragEvent, forcedZone?: "open" | "append") => {
+  const handleDrop = async (
+    e: React.DragEvent,
+    forcedZone?: "open" | "append",
+  ) => {
     if (!e.dataTransfer.types.includes("Files")) {
       return;
     }
@@ -375,7 +392,10 @@ export const App: React.FC = () => {
         if (!file) continue;
 
         let handlePromise: Promise<FileSystemFileHandle | null> | undefined;
-        if ("getAsFileSystemHandle" in item && typeof (item as any).getAsFileSystemHandle === "function") {
+        if (
+          "getAsFileSystemHandle" in item &&
+          typeof (item as any).getAsFileSystemHandle === "function"
+        ) {
           try {
             handlePromise = (item as any)
               .getAsFileSystemHandle()
@@ -444,9 +464,7 @@ export const App: React.FC = () => {
       {settings.showTabBar && (
         <div
           className={
-            settings.tabBarPosition === "top"
-              ? "block"
-              : "block md:hidden"
+            settings.tabBarPosition === "top" ? "block" : "block md:hidden"
           }
         >
           <TabBar
@@ -617,7 +635,8 @@ export const App: React.FC = () => {
                     Open as New Tab(s)
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] text-center mt-1 max-w-xs">
-                    Creates linked document tab(s) with direct local file saving support
+                    Creates linked document tab(s) with direct local file saving
+                    support
                   </p>
                   <span className="mt-3 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)]">
                     Default / Linked Files
