@@ -17,8 +17,13 @@ import { ScriptRunModal } from "./features/scripts/components/ScriptRunModal";
 import { AppUpdateModal } from "./features/settings/components/AppUpdateModal";
 import { AboutModal } from "./features/settings/components/AboutModal";
 import { InstallAppModal } from "./features/settings/components/InstallAppModal";
+import { CloudSyncModal } from "./features/storage/components/CloudSyncModal";
+import { WorkspaceInfoModal } from "./features/workspace/components/WorkspaceInfoModal";
+import { TabInfoModal } from "./features/tabs/components/TabInfoModal";
+import { workspaceFolderService } from "./features/workspace/services/workspaceFolderService";
 import { useScriptStore } from "./features/scripts/store/scriptStore";
 import { useWorkspaceStore } from "./features/workspace/store/workspaceStore";
+import { useCloudStorageStore } from "./features/storage/store/cloudStorageStore";
 import { initSystemThemeListener } from "./features/settings/services/themeService";
 import {
   checkForUpdates,
@@ -77,7 +82,9 @@ export const App: React.FC = () => {
   const clearExternalAlert = useEditorStore((s) => s.clearExternalAlert);
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const [dragTargetZone, setDragTargetZone] = useState<"open" | "append">("open");
+  const [dragTargetZone, setDragTargetZone] = useState<"open" | "append">(
+    "open",
+  );
   const dragCounterRef = useRef(0);
   const [isShortcutMapperOpen, setIsShortcutMapperOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
@@ -87,12 +94,16 @@ export const App: React.FC = () => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isInstallAppOpen, setIsInstallAppOpen] = useState(false);
   const [isMobileTabDrawerOpen, setIsMobileTabDrawerOpen] = useState(false);
+  const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
+  const [isWorkspaceInfoOpen, setIsWorkspaceInfoOpen] = useState(false);
+  const [isTabInfoOpen, setIsTabInfoOpen] = useState(false);
   const [runningScript, setRunningScript] = useState<ScriptMetadata | null>(
     null,
   );
 
   const editorCmds = useEditorCommands();
   const initScriptStore = useScriptStore((s) => s.initScriptStore);
+  const initCloudStatus = useCloudStorageStore((s) => s.initCloudStatus);
 
   // Keybinding store actions
   const getKeybinding = useKeybindingStore((s) => s.getKeybinding);
@@ -100,10 +111,17 @@ export const App: React.FC = () => {
   // Init store, load session, and check automated updates
   useEffect(() => {
     const cleanupSystemTheme = initSystemThemeListener();
+
+    const handleOpenCloudSync = () => setIsCloudSyncOpen(true);
+    const handleOpenWorkspaceInfo = () => setIsWorkspaceInfoOpen(true);
+    window.addEventListener("open-cloud-sync-modal", handleOpenCloudSync);
+    window.addEventListener("open-workspace-info-modal", handleOpenWorkspaceInfo);
+
     const initApp = async () => {
       await initStore();
       await initScriptStore();
       await useWorkspaceStore.getState().initWorkspaces();
+      await initCloudStatus();
 
       // Automated update check based on interval settings
       if (shouldPerformAutoCheck()) {
@@ -117,8 +135,13 @@ export const App: React.FC = () => {
     void initApp();
     return () => {
       cleanupSystemTheme();
+      window.removeEventListener("open-cloud-sync-modal", handleOpenCloudSync);
+      window.removeEventListener(
+        "open-workspace-info-modal",
+        handleOpenWorkspaceInfo,
+      );
     };
-  }, [initStore, initScriptStore]);
+  }, [initStore, initScriptStore, initCloudStatus]);
 
   // Centralized keyboard shortcut execution via Command Registry
   useEffect(() => {
@@ -135,15 +158,23 @@ export const App: React.FC = () => {
         { id: "file.save", action: () => void saveCurrentTab() },
         { id: "file.saveAs", action: () => void saveCurrentTabAs() },
         { id: "file.reopenClosed", action: () => void reopenClosedFile() },
-        { id: "file.toggleBookmark", action: () => editorCmds.toggleBookmark() },
+        {
+          id: "file.toggleBookmark",
+          action: () => editorCmds.toggleBookmark(),
+        },
         { id: "file.nextBookmark", action: () => editorCmds.nextBookmark() },
         { id: "file.prevBookmark", action: () => editorCmds.prevBookmark() },
-        { id: "file.clearBookmarks", action: () => editorCmds.clearBookmarks() },
+        {
+          id: "file.clearBookmarks",
+          action: () => editorCmds.clearBookmarks(),
+        },
         {
           id: "file.closeTab",
           action: () => {
             if (!activeTabId) return;
-            const currentTab = useEditorStore.getState().tabs.find((t) => t.id === activeTabId);
+            const currentTab = useEditorStore
+              .getState()
+              .tabs.find((t) => t.id === activeTabId);
             if (currentTab?.isModified) {
               void (async () => {
                 const confirmed = await dialog.confirm({
@@ -212,6 +243,10 @@ export const App: React.FC = () => {
           action: () => setIsInsertCharacterOpen(true),
         },
         {
+          id: "edit.toggleUnicodeHex",
+          action: () => editorCmds.toggleUnicodeHex(),
+        },
+        {
           id: "view.toggleWordWrap",
           action: () => useEditorStore.getState().toggleLineWrapping(),
         },
@@ -236,6 +271,42 @@ export const App: React.FC = () => {
               void document.exitFullscreen();
             }
           },
+        },
+        { id: "file.tabInfo", action: () => setIsTabInfoOpen(true) },
+        {
+          id: "workspace.save",
+          action: () => {
+            const ws = useWorkspaceStore.getState().workspaces.find(
+              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+            );
+            if (!ws) return;
+            void workspaceFolderService.saveWorkspace(ws.id).then((result) => {
+              if (result === "no-folder")
+                void workspaceFolderService.saveWorkspaceToFolder(ws);
+            });
+          },
+        },
+        {
+          id: "workspace.saveFolder",
+          action: () => {
+            const ws = useWorkspaceStore.getState().workspaces.find(
+              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+            );
+            if (ws) void workspaceFolderService.saveWorkspaceToFolder(ws);
+          },
+        },
+        {
+          id: "workspace.openFolder",
+          action: () => void workspaceFolderService.openFolderAsWorkspace(),
+        },
+        {
+          id: "workspace.cloudSync",
+          action: () =>
+            window.dispatchEvent(new CustomEvent("open-cloud-sync-modal")),
+        },
+        {
+          id: "workspace.info",
+          action: () => setIsWorkspaceInfoOpen(true),
         },
       ];
 
@@ -267,6 +338,7 @@ export const App: React.FC = () => {
     saveCurrentTab,
     saveCurrentTabAs,
     toggleSearch,
+    // workspace commands don't need reactive deps — they read store state lazily
   ]);
 
   // External File Watcher: Check for changes on window focus and periodically
@@ -344,7 +416,10 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDrop = async (e: React.DragEvent, forcedZone?: "open" | "append") => {
+  const handleDrop = async (
+    e: React.DragEvent,
+    forcedZone?: "open" | "append",
+  ) => {
     if (!e.dataTransfer.types.includes("Files")) {
       return;
     }
@@ -365,7 +440,10 @@ export const App: React.FC = () => {
         if (!file) continue;
 
         let handlePromise: Promise<FileSystemFileHandle | null> | undefined;
-        if ("getAsFileSystemHandle" in item && typeof (item as any).getAsFileSystemHandle === "function") {
+        if (
+          "getAsFileSystemHandle" in item &&
+          typeof (item as any).getAsFileSystemHandle === "function"
+        ) {
           try {
             handlePromise = (item as any)
               .getAsFileSystemHandle()
@@ -422,6 +500,8 @@ export const App: React.FC = () => {
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenInstallApp={() => setIsInstallAppOpen(true)}
         onRunScript={(script) => setRunningScript(script)}
+        onOpenWorkspaceInfo={() => setIsWorkspaceInfoOpen(true)}
+        onOpenTabInfo={() => setIsTabInfoOpen(true)}
       />
 
       {/* 2. Main Toolbar */}
@@ -434,9 +514,7 @@ export const App: React.FC = () => {
       {settings.showTabBar && (
         <div
           className={
-            settings.tabBarPosition === "top"
-              ? "block"
-              : "block md:hidden"
+            settings.tabBarPosition === "top" ? "block" : "block md:hidden"
           }
         >
           <TabBar
@@ -533,6 +611,26 @@ export const App: React.FC = () => {
             onClose={() => setIsInstallAppOpen(false)}
           />
 
+          {/* Cloud Sync & Encryption Modal */}
+          <CloudSyncModal
+            isOpen={isCloudSyncOpen}
+            onClose={() => setIsCloudSyncOpen(false)}
+          />
+
+          {/* Workspace Information Modal */}
+          <WorkspaceInfoModal
+            isOpen={isWorkspaceInfoOpen}
+            onClose={() => setIsWorkspaceInfoOpen(false)}
+            onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+          />
+
+          {/* Tab Information Modal */}
+          <TabInfoModal
+            isOpen={isTabInfoOpen}
+            tab={activeTab ?? null}
+            onClose={() => setIsTabInfoOpen(false)}
+          />
+
           {/* Script Manager Modal */}
           <ScriptManagerModal
             isOpen={isScriptManagerOpen}
@@ -601,7 +699,8 @@ export const App: React.FC = () => {
                     Open as New Tab(s)
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] text-center mt-1 max-w-xs">
-                    Creates linked document tab(s) with direct local file saving support
+                    Creates linked document tab(s) with direct local file saving
+                    support
                   </p>
                   <span className="mt-3 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)]">
                     Default / Linked Files

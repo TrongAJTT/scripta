@@ -332,19 +332,38 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
                         </span>
                       </td>
                       <td className="py-2 px-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectAndInsert(item);
-                          }}
-                          className={`px-2.5 py-1 text-[11px] rounded transition-colors font-medium cursor-pointer ${
-                            isSelected
-                              ? "bg-[var(--accent)] text-black font-semibold"
-                              : "bg-[var(--bg-surface)] hover:bg-[var(--accent)] hover:text-black border border-[var(--border-color)]"
-                          }`}
-                        >
-                          Insert
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Insert button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectAndInsert(item);
+                            }}
+                            className={`px-2.5 py-1 text-[11px] rounded transition-colors font-medium cursor-pointer ${
+                              isSelected
+                                ? "bg-[var(--accent)] text-black font-semibold"
+                                : "bg-[var(--bg-surface)] hover:bg-[var(--accent)] hover:text-black border border-[var(--border-color)]"
+                            }`}
+                          >
+                            Insert
+                          </button>
+
+                          {/* Copy button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopy(item.char, item.char);
+                            }}
+                            title="Copy"
+                            className={`p-1 text-[11px] rounded transition-colors font-medium cursor-pointer ${
+                              isSelected
+                                ? "bg-[var(--accent)] text-black font-semibold"
+                                : "bg-[var(--bg-surface)] hover:bg-[var(--accent)] hover:text-black border border-[var(--border-color)]"
+                            }`}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

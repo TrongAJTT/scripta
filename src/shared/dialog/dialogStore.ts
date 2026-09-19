@@ -39,6 +39,7 @@ export interface PromptOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: DialogVariant;
+  inputType?: "text" | "password";
   validate?: (value: string) => string | null | undefined;
 }
 

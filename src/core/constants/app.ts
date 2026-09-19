@@ -16,3 +16,12 @@ export const DONATE_LINKS = {
   GITHUB_SPONSOR: "https://github.com/sponsors/TrongAJTT",
   AUTHOR_DONATE: "https://www.trongajtt.com/donate",
 } as const;
+
+export const CLOUD_STORAGE = {
+  // Public Client ID (App key) for Dropbox OAuth 2.0 PKCE
+  DROPBOX_APP_KEY: "k2vouwk391dsfug",
+  DROPBOX_REDIRECT_URI:
+    typeof window !== "undefined"
+      ? `${window.location.origin}/`
+      : "http://localhost:5173/",
+} as const;

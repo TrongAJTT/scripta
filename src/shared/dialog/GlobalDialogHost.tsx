@@ -216,7 +216,11 @@ const DialogContent: React.FC<{ dialog: NonNullable<DialogState> }> = ({
               <div className="relative flex items-center">
                 <input
                   ref={inputRef}
-                  type="text"
+                  type={
+                    type === "prompt" && options.inputType
+                      ? options.inputType
+                      : "text"
+                  }
                   value={promptValue}
                   placeholder={options.placeholder}
                   onChange={(e) => {

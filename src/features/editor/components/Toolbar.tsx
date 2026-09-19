@@ -31,10 +31,12 @@ import {
   Link,
   Check,
   Bookmark,
+  FolderGit2,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
 import { WorkspaceMenuItems } from "../../workspace/components/WorkspaceMenuItems";
+import { WorkspaceFolderSyncMenuItems } from "../../workspace/components/WorkspaceFolderSyncMenuItems";
 import { ThemeMenuItems } from "../../settings/components/ThemeMenuItems";
 import { BookmarkMenuItems } from "./BookmarkMenuItems";
 import { DropdownMenu } from "../../../shared/components/DropdownMenu";
@@ -47,6 +49,7 @@ import {
   shareApp,
   copyAppLink,
 } from "../services/shareService";
+import { ConvertCaseMenuItems } from "./ConvertCaseMenuItems";
 
 export const Toolbar: React.FC = () => {
   const tabs = useEditorStore((s) => s.tabs);
@@ -325,31 +328,7 @@ export const Toolbar: React.FC = () => {
               </button>
             }
           >
-            <DropdownMenu.Item
-              label="UPPERCASE"
-              commandId="edit.toUpperCase"
-              onSelect={editorCmds.toUpperCase}
-            />
-            <DropdownMenu.Item
-              label="lowercase"
-              commandId="edit.toLowerCase"
-              onSelect={editorCmds.toLowerCase}
-            />
-            <DropdownMenu.Item
-              label="Proper Case (Blend)"
-              commandId="edit.toProperCase"
-              onSelect={editorCmds.toProperCase}
-            />
-            <DropdownMenu.Item
-              label="Title Case"
-              commandId="edit.toTitleCase"
-              onSelect={editorCmds.toTitleCase}
-            />
-            <DropdownMenu.Item
-              label="iNVERT cASE"
-              commandId="edit.invertCase"
-              onSelect={editorCmds.invertCase}
-            />
+            <ConvertCaseMenuItems editorCmds={editorCmds} />
           </DropdownMenu>
         </div>
 
@@ -403,12 +382,27 @@ export const Toolbar: React.FC = () => {
         <div className="hidden md:flex items-center">
           <DropdownMenu
             align="right"
+            alignGutter
             trigger={
               <button
                 className="toolbar-btn flex items-center gap-1.5 px-2 text-xs font-normal"
-                title={`Active Workspace: ${activeWorkspace?.name || "Workspace"}`}
+                title={`Active Workspace: ${activeWorkspace?.name || "Workspace"}${activeWorkspace?.lastSyncedAt ? " (Synced to Cloud)" : ""}`}
               >
-                <Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)] shrink-0" />
+                <div className="relative flex items-center shrink-0">
+                  <Folder
+                    className={`w-3.5 h-3.5 ${
+                      activeWorkspace?.lastSyncedAt
+                        ? "text-[var(--accent-blue)]"
+                        : "text-[var(--accent-yellow)]"
+                    }`}
+                  />
+                  {activeWorkspace?.lastSyncedAt && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--accent-blue)] ring-1 ring-[var(--bg-toolbar)]"
+                      title="Cloud Synced"
+                    />
+                  )}
+                </div>
                 <span className="max-w-[110px] truncate text-[11px] text-[var(--text-main)] font-medium">
                   {activeWorkspace?.name || "Workspace"}
                 </span>
@@ -417,6 +411,25 @@ export const Toolbar: React.FC = () => {
             }
           >
             <WorkspaceMenuItems />
+          </DropdownMenu>
+        </div>
+
+        {/* Folder & Cloud Sync Dropdown Menu (Desktop) */}
+        <div className="hidden md:flex items-center">
+          <DropdownMenu
+            align="right"
+            alignGutter
+            trigger={
+              <button
+                className="toolbar-btn flex items-center gap-1 px-1.5 text-xs text-[var(--accent-blue)]"
+                title="Folder & Cloud Sync"
+              >
+                <FolderGit2 className="w-4 h-4 text-[var(--accent-blue)]" />
+                <span className="text-[9px] text-[var(--text-muted)]">▾</span>
+              </button>
+            }
+          >
+            <WorkspaceFolderSyncMenuItems />
           </DropdownMenu>
         </div>
 
@@ -518,6 +531,7 @@ export const Toolbar: React.FC = () => {
                 )}
               </button>
             }
+            className="w-[60vw]"
           >
             {/* Lock / Unlock active file on mobile */}
             {activeTab && (
@@ -587,40 +601,14 @@ export const Toolbar: React.FC = () => {
               icon={
                 <CaseSensitive className="w-3.5 h-3.5 text-[var(--accent-purple)]" />
               }
-              alignGutter
             >
-              <DropdownMenu.Item
-                label="UPPERCASE"
-                commandId="edit.toUpperCase"
-                onSelect={editorCmds.toUpperCase}
-              />
-              <DropdownMenu.Item
-                label="lowercase"
-                commandId="edit.toLowerCase"
-                onSelect={editorCmds.toLowerCase}
-              />
-              <DropdownMenu.Item
-                label="Proper Case (Blend)"
-                commandId="edit.toProperCase"
-                onSelect={editorCmds.toProperCase}
-              />
-              <DropdownMenu.Item
-                label="Title Case"
-                commandId="edit.toTitleCase"
-                onSelect={editorCmds.toTitleCase}
-              />
-              <DropdownMenu.Item
-                label="iNVERT cASE"
-                commandId="edit.invertCase"
-                onSelect={editorCmds.invertCase}
-              />
+              <ConvertCaseMenuItems editorCmds={editorCmds} />
             </DropdownMenu.Sub>
 
             {/* Bookmarks Submenu (Mobile) */}
             <DropdownMenu.Sub
               label={`Bookmarks${editorCmds.getBookmarks().length > 0 ? ` (${editorCmds.getBookmarks().length})` : ""}`}
               icon={<Bookmark className="w-3.5 h-3.5 text-[var(--accent)]" />}
-              alignGutter
             >
               <BookmarkMenuItems editorCmds={editorCmds} />
             </DropdownMenu.Sub>
@@ -631,11 +619,27 @@ export const Toolbar: React.FC = () => {
             <DropdownMenu.Sub
               label="Workspace"
               icon={
-                <Folder className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />
+                <Folder
+                  className={`w-3.5 h-3.5 ${
+                    activeWorkspace?.lastSyncedAt
+                      ? "text-[var(--accent-blue)]"
+                      : "text-[var(--accent-yellow)]"
+                  }`}
+                />
               }
               alignGutter
             >
               <WorkspaceMenuItems />
+            </DropdownMenu.Sub>
+
+            {/* Folder & Cloud Sync Accordion Submenu */}
+            <DropdownMenu.Sub
+              label="Folder & Cloud Sync"
+              icon={
+                <FolderGit2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+              }
+            >
+              <WorkspaceFolderSyncMenuItems showIcon={false} />
             </DropdownMenu.Sub>
 
             {/* Appearance / Theme Accordion Submenu */}
