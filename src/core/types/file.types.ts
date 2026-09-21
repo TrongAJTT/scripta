@@ -22,6 +22,8 @@ export interface CursorPosition {
   line: number;
   col: number;
   selectedChars: number;
+  linesCount?: number;
+  charsCount?: number;
 }
 
 import type { SupportedEncoding } from '../utils/encodingUtils';

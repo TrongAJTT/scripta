@@ -58,6 +58,8 @@ interface EditorState {
   isSearching: boolean;
   settings: EditorSettings;
   externalAlert: ExternalAlertData | null;
+  activeCursorPos: CursorPosition;
+  flushCurrentTabContent?: () => void;
 
   // Lifecycle
   initStore: () => Promise<void>;
@@ -204,6 +206,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   externalAlert: null,
   recentFiles: [],
   closedFilesStack: [],
+  activeCursorPos: { line: 1, col: 1, selectedChars: 0 },
 
   initStore: async () => {
     // Restore settings from IndexedDB (or fallback to localStorage)
@@ -245,10 +248,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         restoredTabs.some((x) => x.id === saved.activeTabId)
           ? saved.activeTabId
           : restoredTabs[0].id;
+      const targetTab = restoredTabs.find((x) => x.id === restoredActiveId);
       set({
         tabs: restoredTabs,
         activeTabId: restoredActiveId,
         recentTabIds: [restoredActiveId],
+        activeCursorPos: targetTab?.cursorPos || {
+          line: 1,
+          col: 1,
+          selectedChars: 0,
+        },
       });
     } else {
       const defaultTab = createInitialTab("welcome.md");
@@ -256,6 +265,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         tabs: [defaultTab],
         activeTabId: defaultTab.id,
         recentTabIds: [defaultTab.id],
+        activeCursorPos: defaultTab.cursorPos || {
+          line: 1,
+          col: 1,
+          selectedChars: 0,
+        },
       });
     }
   },
@@ -556,12 +570,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ recentTabIds: nextRecent });
       return;
     }
-    set({ activeTabId: id, recentTabIds: nextRecent });
+    const targetTab = tabs.find((t) => t.id === id);
+    set({
+      activeTabId: id,
+      recentTabIds: nextRecent,
+      activeCursorPos: targetTab?.cursorPos || {
+        line: 1,
+        col: 1,
+        selectedChars: 0,
+      },
+    });
     debouncedSaveSession(tabs, id);
   },
 
   updateTabContent: (id: string, content: string) => {
     const { tabs, activeTabId } = get();
+    const currentTab = tabs.find((t) => t.id === id);
+    if (currentTab && currentTab.content === content) return;
+
     const nextTabs = tabs.map((t) => {
       if (t.id === id) {
         return {
@@ -578,9 +604,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateCursorPos: (id: string, pos: CursorPosition) => {
-    set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === id ? { ...t, cursorPos: pos } : t)),
-    }));
+    const { tabs } = get();
+    const tab = tabs.find((t) => t.id === id);
+    if (tab) {
+      tab.cursorPos = pos;
+    }
+    set({ activeCursorPos: pos });
   },
 
   updateTabBookmarks: (id: string, bookmarks: number[]) => {
@@ -852,6 +881,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   saveCurrentTab: async () => {
+    const { flushCurrentTabContent } = get();
+    if (flushCurrentTabContent) {
+      flushCurrentTabContent();
+    }
     const { tabs, activeTabId } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId);
     if (!activeTab) return;
@@ -870,6 +903,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   saveCurrentTabAs: async () => {
+    const { flushCurrentTabContent } = get();
+    if (flushCurrentTabContent) {
+      flushCurrentTabContent();
+    }
     const { tabs, activeTabId } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId);
     if (!activeTab) return;

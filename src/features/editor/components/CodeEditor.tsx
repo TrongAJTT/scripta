@@ -66,7 +66,23 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const syncContentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSyncedContentRef = useRef<string>(initialContent);
   const { setView } = useEditorView();
+
+  const flushDoc = () => {
+    if (syncContentTimeoutRef.current) {
+      clearTimeout(syncContentTimeoutRef.current);
+      syncContentTimeoutRef.current = null;
+    }
+    if (viewRef.current) {
+      const currentDoc = viewRef.current.state.doc.toString();
+      if (currentDoc !== lastSyncedContentRef.current) {
+        lastSyncedContentRef.current = currentDoc;
+        updateTabContent(tabId, currentDoc);
+      }
+    }
+  };
 
   const activeTab = useEditorStore((s) => s.tabs.find((t) => t.id === tabId));
   const isLocked = Boolean(activeTab?.isLocked);
@@ -122,6 +138,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       {
         key: "Mod-s",
         run: () => {
+          flushDoc();
           saveCurrentTab();
           return true;
         },
@@ -162,8 +179,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     // Listener to update content, cursor, and bookmarks
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
-        const newDoc = update.state.doc.toString();
-        updateTabContent(tabId, newDoc);
+        if (syncContentTimeoutRef.current) {
+          clearTimeout(syncContentTimeoutRef.current);
+        }
+        syncContentTimeoutRef.current = setTimeout(() => {
+          syncContentTimeoutRef.current = null;
+          flushDoc();
+        }, 300);
       }
 
       if (update.selectionSet || update.docChanged) {
@@ -177,6 +199,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           line: line.number,
           col,
           selectedChars,
+          linesCount: update.state.doc.lines,
+          charsCount: update.state.doc.length,
         });
       }
 
@@ -274,8 +298,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
     viewRef.current = view;
     setView(view);
+    useEditorStore.setState({ flushCurrentTabContent: flushDoc });
 
     return () => {
+      useEditorStore.setState({ flushCurrentTabContent: undefined });
+      flushDoc();
       view.destroy();
       viewRef.current = null;
       setView(null);
@@ -297,11 +324,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   // Sync external content changes (e.g. Find & Replace, external reloads, direct store updates)
   useEffect(() => {
     if (content !== undefined && viewRef.current) {
-      const currentDoc = viewRef.current.state.doc.toString();
-      if (content !== currentDoc) {
-        viewRef.current.dispatch({
-          changes: { from: 0, to: currentDoc.length, insert: content },
-        });
+      if (content !== lastSyncedContentRef.current) {
+        lastSyncedContentRef.current = content;
+        const currentDoc = viewRef.current.state.doc.toString();
+        if (content !== currentDoc) {
+          viewRef.current.dispatch({
+            changes: { from: 0, to: currentDoc.length, insert: content },
+          });
+        }
       }
     }
   }, [content]);
