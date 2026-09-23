@@ -28,6 +28,7 @@ const libs: string[] = [
   "dnd-kit",
   "Tailwind CSS",
   "Lucide Icons",
+  "react-colorful",
   "idb",
   "fflate",
 ];

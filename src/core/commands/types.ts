@@ -17,6 +17,7 @@ export type CommandId =
   | "workspace.cloudSync"
   | "workspace.info"
   | "edit.findReplace"
+  | "edit.goTo"
   | "edit.duplicateLine"
   | "edit.deleteLine"
   | "edit.moveLineUp"

@@ -56,6 +56,10 @@ export function detectLanguageFromFilename(filename: string): {
     case "json":
       return { language: "json", previewType: "json" };
 
+    case "csv":
+    case "tsv":
+      return { language: "csv", previewType: "csv" };
+
     case "py":
       return { language: "python", previewType: "console" };
 
@@ -98,6 +102,8 @@ export function getDefaultExtensionForLanguage(
       return "css";
     case "json":
       return "json";
+    case "csv":
+      return "csv";
     case "python":
       return "py";
     case "svg":
@@ -147,6 +153,8 @@ export function getPreviewTypeForLanguage(
       return "json";
     case "css":
       return "css";
+    case "csv":
+      return "csv";
     default:
       return "none";
   }
@@ -257,13 +265,28 @@ export function detectLanguageFromContent(
     return "markdown";
   }
 
-  // 4. Mermaid: standard diagram header declarations
+  // 8. Mermaid: standard diagram header declarations
   if (
     /^(?:graph\s+(?:TD|TB|BT|RL|LR)|flowchart\s+(?:TD|TB|BT|RL|LR)|sequenceDiagram|classDiagram(?:-v2)?|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie(?:\s+title)?|gitGraph|mindmap|timeline|quadrantChart|sankey-beta|xychart-beta|block-beta|kanban|architecture-beta)\b/m.test(
       trimmed,
     )
   ) {
     return "mermaid";
+  }
+
+  // 9. CSV / TSV heuristic: multiple non-empty lines with consistent delimiter count
+  const sampleLines = trimmed
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .slice(0, 10);
+  if (sampleLines.length >= 2) {
+    const delimiters = [",", "\t", ";"];
+    for (const del of delimiters) {
+      const counts = sampleLines.map((l) => l.split(del).length - 1);
+      if (counts[0] >= 1 && counts.every((c) => c === counts[0])) {
+        return "csv";
+      }
+    }
   }
 
   return null;

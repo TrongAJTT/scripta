@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useEditorStore } from "../../tabs/store";
 import { formatByteSize } from "../../../core/utils/fileDetection";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
@@ -9,20 +9,22 @@ export const StatusBar: React.FC = () => {
   const tabs = useEditorStore((s) => s.tabs);
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const activeTab = tabs.find((t) => t.id === activeTabId);
+  const cursorPos = useEditorStore((s) => s.activeCursorPos);
   const setEncodingForActiveTab = useEditorStore((s) => s.setEncodingForActiveTab);
   const convertEncodingForActiveTab = useEditorStore((s) => s.convertEncodingForActiveTab);
 
+  const byteSize = useMemo(
+    () => new Blob([activeTab?.content || ""]).size,
+    [activeTab?.content],
+  );
+
   if (!activeTab) return null;
 
-  const content = activeTab.content || "";
-  const linesCount = content.split("\n").length;
-  const charsCount = content.length;
-  const byteSize = new Blob([content]).size;
-  const cursorPos = activeTab.cursorPos || {
-    line: 1,
-    col: 1,
-    selectedChars: 0,
-  };
+  const linesCount =
+    cursorPos.linesCount ??
+    (activeTab.content ? activeTab.content.split("\n").length : 1);
+  const charsCount =
+    cursorPos.charsCount ?? (activeTab.content?.length || 0);
 
   return (
     <div className="h-6 bg-[var(--bg-statusbar)] border-t border-[var(--border-color)] px-3 flex items-center justify-between text-[11px] text-[var(--text-muted)] select-none shrink-0 font-mono">

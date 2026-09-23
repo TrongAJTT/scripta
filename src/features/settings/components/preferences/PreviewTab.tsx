@@ -1,8 +1,27 @@
 import React, { useEffect, useState, useRef } from "react";
 import mermaid from "mermaid";
-import { Moon, Sun, Laptop, Palette, Eye, RefreshCw } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  Laptop,
+  Palette,
+  Eye,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { useEditorStore } from "../../../tabs/store";
-import type { MermaidTheme, JsonTheme } from "../../../../core/types/file.types";
+import type {
+  MermaidTheme,
+  JsonTheme,
+  PreviewType,
+} from "../../../../core/types/file.types";
+import {
+  PREVIEW_PERF_PRESETS,
+  PRESET_STEP_ORDER,
+  getActivePreviewThreshold,
+  formatBytes,
+} from "../../../../core/constants/previewLimits";
 import {
   CardPicker,
   type CardPickerOption,
@@ -10,6 +29,7 @@ import {
 import { applyMermaidTheme } from "../../../preview/services/mermaidExportService";
 import { JSON_THEMES } from "../../../../core/constants/jsonThemes";
 import { APP_NAME } from "../../../../core/constants/app";
+import { DataTable } from "../../../preview/components/DataTable";
 
 const SAMPLE_MERMAID = `graph LR
   Client[💻 App UI] -->|Query| API[⚡ Backend]
@@ -89,6 +109,36 @@ export const PreviewTab: React.FC = () => {
   const appTheme = settings.theme;
   const currentMermaidTheme = settings.mermaidTheme || "auto";
   const currentJsonTheme = settings.jsonTheme || "default";
+  const currentPerfPreset = settings.previewPerfPreset || "balanced";
+  const activePresetConfig =
+    PREVIEW_PERF_PRESETS[currentPerfPreset] || PREVIEW_PERF_PRESETS.balanced;
+  const activePresetIndex = activePresetConfig.stepIndex;
+
+  const previewFormats: PreviewType[] = [
+    "markdown",
+    "mermaid",
+    "json",
+    "html",
+    "svg",
+    "css",
+  ];
+
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+
+  const limitColumns = ["Format", "Max Lines", "Max File Size"];
+
+  const limitRows = previewFormats.map((format) => {
+    const th = getActivePreviewThreshold(format, currentPerfPreset);
+    return {
+      Format: th.label,
+      "Max Lines":
+        th.maxLines === Infinity
+          ? "∞ lines"
+          : `${th.maxLines.toLocaleString()} lines`,
+      "Max File Size":
+        th.maxBytes === Infinity ? "Unlimited" : formatBytes(th.maxBytes),
+    };
+  });
 
   const [previewSvg, setPreviewSvg] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -171,20 +221,21 @@ export const PreviewTab: React.FC = () => {
           JSON Tree Viewer Theme
         </h3>
         <p className="text-xs text-[var(--text-muted)] mb-3">
-          Select syntax highlighting colors for interactive JSON preview panels and nodes.
+          Select syntax highlighting colors for interactive JSON preview panels
+          and nodes.
         </p>
 
         <CardPicker
           options={jsonThemeOptions}
           selectedId={currentJsonTheme}
-          onChange={(jsonTheme: JsonTheme) =>
-            updateSettings({ jsonTheme })
-          }
+          onChange={(jsonTheme: JsonTheme) => updateSettings({ jsonTheme })}
         />
 
         {/* Live JSON Sample Preview Box */}
         <div className="mt-3 p-4 rounded-md border border-[var(--border-color)] bg-[var(--bg-editor)] font-mono text-xs shadow-inner space-y-1 select-none">
-          <div style={{ color: jsonColors.bracket }} className="font-bold">{"{"}</div>
+          <div style={{ color: jsonColors.bracket }} className="font-bold">
+            {"{"}
+          </div>
           <div className="pl-4 flex items-center gap-1.5">
             <span style={{ color: jsonColors.key }}>"appName":</span>
             <span style={{ color: jsonColors.string }}>"{APP_NAME}"</span>
@@ -197,17 +248,26 @@ export const PreviewTab: React.FC = () => {
           </div>
           <div className="pl-4 flex items-center gap-1.5">
             <span style={{ color: jsonColors.key }}>"pwaEnabled":</span>
-            <span style={{ color: jsonColors.boolean }} className="font-bold">true</span>
+            <span style={{ color: jsonColors.boolean }} className="font-bold">
+              true
+            </span>
             <span style={{ color: jsonColors.bracket }}>,</span>
           </div>
           <div className="pl-4 flex items-center gap-1.5">
             <span style={{ color: jsonColors.key }}>"metadata":</span>
-            <span style={{ color: jsonColors.nullValue }} className="font-semibold italic">null</span>
+            <span
+              style={{ color: jsonColors.nullValue }}
+              className="font-semibold italic"
+            >
+              null
+            </span>
             <span style={{ color: jsonColors.bracket }}>,</span>
           </div>
           <div className="pl-4 flex items-center gap-1.5">
             <span style={{ color: jsonColors.key }}>"tags":</span>
-            <span style={{ color: jsonColors.bracket }} className="font-bold">[</span>
+            <span style={{ color: jsonColors.bracket }} className="font-bold">
+              [
+            </span>
             <span
               style={{
                 backgroundColor: jsonColors.countBadgeBg,
@@ -218,9 +278,119 @@ export const PreviewTab: React.FC = () => {
             >
               2 items
             </span>
-            <span style={{ color: jsonColors.bracket }} className="font-bold">]</span>
+            <span style={{ color: jsonColors.bracket }} className="font-bold">
+              ]
+            </span>
           </div>
-          <div style={{ color: jsonColors.bracket }} className="font-bold">{"}"}</div>
+          <div style={{ color: jsonColors.bracket }} className="font-bold">
+            {"}"}
+          </div>
+        </div>
+      </div>
+
+      {/* Performance Preset Section */}
+      <div className="pt-2 border-t border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            {/* <Gauge className="w-4 h-4 text-[var(--accent)]" /> */}
+            <h3 className="text-xs font-semibold text-[var(--text-highlight)] uppercase tracking-wider">
+              Split View Performance & Limits
+            </h3>
+          </div>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-4">
+          Adjust soft thresholds according to hardware specs to automatically
+          pause live preview in Split View when editing large files.
+        </p>
+
+        {/* Stepped Hardware Slider */}
+        <div className="space-y-3.5 shadow-inner">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--text-main)]">
+              Hardware Profile Preset
+            </span>
+            <span className="text-xs font-semibold text-[var(--accent)]">
+              {activePresetConfig.label} (
+              {activePresetConfig.multiplier === Infinity
+                ? "No Limits"
+                : `${activePresetConfig.multiplier}x`}
+              )
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={1}
+              value={activePresetIndex}
+              onChange={(e) => {
+                const nextPreset = PRESET_STEP_ORDER[Number(e.target.value)];
+                if (nextPreset) {
+                  updateSettings({ previewPerfPreset: nextPreset });
+                }
+              }}
+              className="w-full h-2 bg-[var(--bg-tab-hover)] rounded appearance-none cursor-pointer accent-[var(--accent)]"
+            />
+
+            {/* Step Labels */}
+            <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)] px-0.5">
+              {PRESET_STEP_ORDER.map((presetKey, idx) => (
+                <button
+                  key={presetKey}
+                  type="button"
+                  onClick={() =>
+                    updateSettings({ previewPerfPreset: presetKey })
+                  }
+                  className={`hover:text-[var(--accent)] transition-colors cursor-pointer ${
+                    activePresetIndex === idx
+                      ? "text-[var(--accent)] font-bold"
+                      : ""
+                  }`}
+                >
+                  {PREVIEW_PERF_PRESETS[presetKey].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] py-2.5 border-b border-[var(--border-subtle)] leading-relaxed">
+            {activePresetConfig.description}
+          </p>
+        </div>
+
+        {/* Active Soft Limits Breakdown (Collapsible DataTable) */}
+        <div className="mt-4 border border-[var(--border-subtle)] rounded-md overflow-hidden bg-[var(--bg-editor)]">
+          <button
+            type="button"
+            onClick={() => setIsDetailsExpanded((prev) => !prev)}
+            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--bg-surface)] hover:bg-[var(--bg-toolbar)] text-xs text-[var(--text-main)] transition-colors cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              {isDetailsExpanded ? (
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--accent)]" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              )}
+              <span className="font-semibold text-[11px] uppercase tracking-wider text-[var(--text-highlight)]">
+                Active Soft Limits Breakdown
+              </span>
+            </div>
+          </button>
+
+          {isDetailsExpanded && (
+            <div className="p-3 border-t border-[var(--border-subtle)] space-y-3">
+              <div className="rounded border border-[var(--border-color)] overflow-hidden shadow-xs">
+                <DataTable
+                  columns={limitColumns}
+                  rows={limitRows}
+                  tableName="PreviewLimits"
+                  isReadOnly={true}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

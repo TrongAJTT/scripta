@@ -8,23 +8,33 @@ import {
 } from "../../../shared/components/ContinuousSectionModalLayout";
 import { GeneralTab, LayoutTab, PreviewTab, EditorTab } from "./preferences";
 
+export type SettingsCategory = "general" | "layout" | "preview" | "editor";
+
 interface PreferencesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenShortcutMapper?: () => void;
   onOpenUpdateModal?: () => void;
+  initialCategory?: SettingsCategory;
 }
-
-type SettingsCategory = "general" | "layout" | "preview" | "editor";
 
 export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   isOpen,
   onClose,
   onOpenUpdateModal,
+  initialCategory,
 }) => {
   const updateSettings = useEditorStore((s) => s.updateSettings);
-  const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>("general");
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>(
+    initialCategory || "general",
+  );
+  const [prevInitialCategory, setPrevInitialCategory] =
+    useState(initialCategory);
+
+  if (initialCategory !== prevInitialCategory) {
+    setPrevInitialCategory(initialCategory);
+    setActiveCategory(initialCategory || "general");
+  }
 
   const handleReset = () => {
     updateSettings({
@@ -38,6 +48,7 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
       showToolbar: true,
       showStatusBar: true,
       mermaidTheme: "auto",
+      previewPerfPreset: "balanced",
     });
   };
 

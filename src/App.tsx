@@ -11,7 +11,10 @@ import { SplitPane } from "./shared/components/SplitPane";
 import { FindReplaceModal } from "./features/editor/components/FindReplaceModal";
 import { ExternalFileAlertModal } from "./features/editor/components/ExternalFileAlertModal";
 import { ShortcutMapperModal } from "./features/settings/components/ShortcutMapperModal";
-import { PreferencesModal } from "./features/settings/components/PreferencesModal";
+import {
+  PreferencesModal,
+  type SettingsCategory,
+} from "./features/settings/components/PreferencesModal";
 import { ScriptManagerModal } from "./features/scripts/components/ScriptManagerModal";
 import { ScriptRunModal } from "./features/scripts/components/ScriptRunModal";
 import { AppUpdateModal } from "./features/settings/components/AppUpdateModal";
@@ -33,6 +36,7 @@ import type { ScriptMetadata } from "./features/scripts/types/script.types";
 import type { DroppedFileItem } from "./core/types/file.types";
 import { UploadCloud, FileCode2, FilePlus2, FileText } from "lucide-react";
 import { InsertCharacterModal } from "./features/editor/components/InsertCharacterModal";
+import { GoToModal } from "./features/editor/components/GoToModal";
 import { GlobalDialogHost } from "./shared/dialog/GlobalDialogHost";
 import { dialog } from "./shared/dialog/dialogStore";
 import { useEditorCommands } from "./features/editor/hooks/useEditorCommands";
@@ -88,6 +92,8 @@ export const App: React.FC = () => {
   const dragCounterRef = useRef(0);
   const [isShortcutMapperOpen, setIsShortcutMapperOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [preferencesCategory, setPreferencesCategory] =
+    useState<SettingsCategory>("general");
   const [isScriptManagerOpen, setIsScriptManagerOpen] = useState(false);
   const [isInsertCharacterOpen, setIsInsertCharacterOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -97,6 +103,7 @@ export const App: React.FC = () => {
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isWorkspaceInfoOpen, setIsWorkspaceInfoOpen] = useState(false);
   const [isTabInfoOpen, setIsTabInfoOpen] = useState(false);
+  const [isGoToOpen, setIsGoToOpen] = useState(false);
   const [runningScript, setRunningScript] = useState<ScriptMetadata | null>(
     null,
   );
@@ -114,8 +121,23 @@ export const App: React.FC = () => {
 
     const handleOpenCloudSync = () => setIsCloudSyncOpen(true);
     const handleOpenWorkspaceInfo = () => setIsWorkspaceInfoOpen(true);
+    const handleOpenPreferencesModal = (e: Event) => {
+      const customEvent = e as CustomEvent<{ category?: SettingsCategory }>;
+      if (customEvent.detail?.category) {
+        setPreferencesCategory(customEvent.detail.category);
+      }
+      setIsPreferencesOpen(true);
+    };
+
     window.addEventListener("open-cloud-sync-modal", handleOpenCloudSync);
-    window.addEventListener("open-workspace-info-modal", handleOpenWorkspaceInfo);
+    window.addEventListener(
+      "open-workspace-info-modal",
+      handleOpenWorkspaceInfo,
+    );
+    window.addEventListener(
+      "open-preferences-modal",
+      handleOpenPreferencesModal,
+    );
 
     const initApp = async () => {
       await initStore();
@@ -139,6 +161,10 @@ export const App: React.FC = () => {
       window.removeEventListener(
         "open-workspace-info-modal",
         handleOpenWorkspaceInfo,
+      );
+      window.removeEventListener(
+        "open-preferences-modal",
+        handleOpenPreferencesModal,
       );
     };
   }, [initStore, initScriptStore, initCloudStatus]);
@@ -218,6 +244,7 @@ export const App: React.FC = () => {
           },
         },
         { id: "edit.findReplace", action: () => toggleSearch(true) },
+        { id: "edit.goTo", action: () => setIsGoToOpen(true) },
         {
           id: "settings.shortcutMapper",
           action: () => setIsShortcutMapperOpen(true),
@@ -276,9 +303,11 @@ export const App: React.FC = () => {
         {
           id: "workspace.save",
           action: () => {
-            const ws = useWorkspaceStore.getState().workspaces.find(
-              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
-            );
+            const ws = useWorkspaceStore
+              .getState()
+              .workspaces.find(
+                (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+              );
             if (!ws) return;
             void workspaceFolderService.saveWorkspace(ws.id).then((result) => {
               if (result === "no-folder")
@@ -289,9 +318,11 @@ export const App: React.FC = () => {
         {
           id: "workspace.saveFolder",
           action: () => {
-            const ws = useWorkspaceStore.getState().workspaces.find(
-              (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
-            );
+            const ws = useWorkspaceStore
+              .getState()
+              .workspaces.find(
+                (w) => w.id === useWorkspaceStore.getState().activeWorkspaceId,
+              );
             if (ws) void workspaceFolderService.saveWorkspaceToFolder(ws);
           },
         },
@@ -502,6 +533,7 @@ export const App: React.FC = () => {
         onRunScript={(script) => setRunningScript(script)}
         onOpenWorkspaceInfo={() => setIsWorkspaceInfoOpen(true)}
         onOpenTabInfo={() => setIsTabInfoOpen(true)}
+        onOpenGoTo={() => setIsGoToOpen(true)}
       />
 
       {/* 2. Main Toolbar */}
@@ -585,6 +617,7 @@ export const App: React.FC = () => {
           <PreferencesModal
             isOpen={isPreferencesOpen}
             onClose={() => setIsPreferencesOpen(false)}
+            initialCategory={preferencesCategory}
             onOpenShortcutMapper={() => {
               setIsPreferencesOpen(false);
               setIsShortcutMapperOpen(true);
@@ -655,6 +688,13 @@ export const App: React.FC = () => {
             isOpen={isInsertCharacterOpen}
             onClose={() => setIsInsertCharacterOpen(false)}
             onInsert={(char) => editorCmds.insertText(char)}
+          />
+
+          {/* Go To Line/Offset/Bookmark Modal */}
+          <GoToModal
+            isOpen={isGoToOpen}
+            onClose={() => setIsGoToOpen(false)}
+            editorCmds={editorCmds}
           />
 
           {/* Drag & Drop Dual-Zone Visual Overlay */}
