@@ -19,6 +19,7 @@ import {
 import { useEditorStore } from "../../tabs/store";
 import { analyzeJsonForTables } from "../services/jsonTableUtils";
 import { DataTable } from "../components/DataTable";
+import { DataTableHeaderActions } from "../components/DataTableHeaderActions";
 
 interface JsonNodeProps {
   name?: string | number;
@@ -190,12 +191,35 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   );
 };
 
+// Smart type caster for edited cell values
+function castJsonValue(val: string): unknown {
+  const trimmed = val.trim();
+  if (trimmed === "null") return null;
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  if (trimmed !== "" && !Number.isNaN(Number(trimmed))) {
+    return Number(trimmed);
+  }
+  if (
+    (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+    (trimmed.startsWith("{") && trimmed.endsWith("}"))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Fallback to string
+    }
+  }
+  return val;
+}
+
 export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
   tab,
   setHeaderActions,
 }) => {
   const jsonTheme = useEditorStore((s) => s.settings.jsonTheme || "default");
   const themeColors = JSON_THEMES[jsonTheme] || JSON_THEMES.default;
+  const updateTabContent = useEditorStore((s) => s.updateTabContent);
 
   const [expandMode, setExpandMode] = useState<{
     isAllExpanded: boolean | null;
@@ -206,6 +230,7 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
   });
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<"tree" | "table">("tree");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const rawContent = tab.content || "";
 
@@ -235,6 +260,10 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
       ? selectedCandidateIndex
       : tableAnalysis.defaultCandidateIndex;
 
+  const currentCandidate =
+    tableAnalysis.candidates[activeCandidateIndex] ||
+    tableAnalysis.candidates[0];
+
   const handleCopyPretty = useCallback(async () => {
     if (data === null) return;
     try {
@@ -255,6 +284,182 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
     setExpandMode({ isAllExpanded: false, key: Date.now() });
   }, []);
 
+  // 2-Way Data-Binding Handlers for JSON
+  const handleUpdateCell = useCallback(
+    (rowIndex: number, column: string, newValue: string) => {
+      if (!data || !currentCandidate) return;
+      try {
+        const cloned = JSON.parse(JSON.stringify(data));
+        const parsedVal = castJsonValue(newValue);
+
+        if (currentCandidate.id === "root") {
+          if (Array.isArray(cloned) && cloned[rowIndex]) {
+            cloned[rowIndex][column] = parsedVal;
+          }
+        } else if (currentCandidate.id === "__dictionary__") {
+          const targetId = currentCandidate.rows[rowIndex]?._id as string;
+          if (targetId && cloned[targetId]) {
+            cloned[targetId][column] = parsedVal;
+          }
+        } else {
+          // Property array in root object
+          const candidateArray = cloned[currentCandidate.id];
+          if (Array.isArray(candidateArray) && candidateArray[rowIndex]) {
+            candidateArray[rowIndex][column] = parsedVal;
+          }
+        }
+
+        updateTabContent(tab.id, JSON.stringify(cloned, null, 2));
+      } catch {
+        // Guard against clone errors
+      }
+    },
+    [data, currentCandidate, tab.id, updateTabContent],
+  );
+
+  const handleRenameColumn = useCallback(
+    (oldColumn: string, newColumn: string) => {
+      if (!data || !currentCandidate || !newColumn.trim() || newColumn === oldColumn) return;
+      try {
+        const cloned = JSON.parse(JSON.stringify(data));
+        const renameInRow = (r: Record<string, unknown>) => {
+          r[newColumn] = r[oldColumn];
+          delete r[oldColumn];
+        };
+
+        if (currentCandidate.id === "root" && Array.isArray(cloned)) {
+          cloned.forEach(renameInRow);
+        } else if (currentCandidate.id === "__dictionary__") {
+          Object.values(cloned).forEach((v) => {
+            if (v && typeof v === "object") renameInRow(v as Record<string, unknown>);
+          });
+        } else {
+          const candidateArray = cloned[currentCandidate.id];
+          if (Array.isArray(candidateArray)) {
+            candidateArray.forEach(renameInRow);
+          }
+        }
+
+        updateTabContent(tab.id, JSON.stringify(cloned, null, 2));
+      } catch {
+        // Guard
+      }
+    },
+    [data, currentCandidate, tab.id, updateTabContent],
+  );
+
+  const handleDeleteRow = useCallback(
+    (rowIndex: number) => {
+      if (!data || !currentCandidate) return;
+      try {
+        const cloned = JSON.parse(JSON.stringify(data));
+
+        if (currentCandidate.id === "root" && Array.isArray(cloned)) {
+          cloned.splice(rowIndex, 1);
+        } else if (currentCandidate.id === "__dictionary__") {
+          const targetId = currentCandidate.rows[rowIndex]?._id as string;
+          if (targetId) delete cloned[targetId];
+        } else {
+          const candidateArray = cloned[currentCandidate.id];
+          if (Array.isArray(candidateArray)) {
+            candidateArray.splice(rowIndex, 1);
+          }
+        }
+
+        updateTabContent(tab.id, JSON.stringify(cloned, null, 2));
+      } catch {
+        // Guard
+      }
+    },
+    [data, currentCandidate, tab.id, updateTabContent],
+  );
+
+  const handleDeleteColumn = useCallback(
+    (column: string) => {
+      if (!data || !currentCandidate) return;
+      try {
+        const cloned = JSON.parse(JSON.stringify(data));
+        const deleteInRow = (r: Record<string, unknown>) => {
+          delete r[column];
+        };
+
+        if (currentCandidate.id === "root" && Array.isArray(cloned)) {
+          cloned.forEach(deleteInRow);
+        } else if (currentCandidate.id === "__dictionary__") {
+          Object.values(cloned).forEach((v) => {
+            if (v && typeof v === "object") deleteInRow(v as Record<string, unknown>);
+          });
+        } else {
+          const candidateArray = cloned[currentCandidate.id];
+          if (Array.isArray(candidateArray)) {
+            candidateArray.forEach(deleteInRow);
+          }
+        }
+
+        updateTabContent(tab.id, JSON.stringify(cloned, null, 2));
+      } catch {
+        // Guard
+      }
+    },
+    [data, currentCandidate, tab.id, updateTabContent],
+  );
+
+  const handleMoveColumn = useCallback(
+    (column: string, direction: "left" | "right") => {
+      if (!data || !currentCandidate) return;
+      const idx = currentCandidate.columns.indexOf(column);
+      if (idx === -1) return;
+      if (direction === "left" && idx === 0) return;
+      if (direction === "right" && idx === currentCandidate.columns.length - 1) return;
+
+      const targetIdx = direction === "left" ? idx - 1 : idx + 1;
+      const reorderedCols = [...currentCandidate.columns];
+      const [movedCol] = reorderedCols.splice(idx, 1);
+      reorderedCols.splice(targetIdx, 0, movedCol);
+
+      try {
+        const cloned = JSON.parse(JSON.stringify(data));
+        const reorderInRow = (r: Record<string, unknown>) => {
+          const newRow: Record<string, unknown> = {};
+          for (const c of reorderedCols) {
+            if (Object.prototype.hasOwnProperty.call(r, c)) {
+              newRow[c] = r[c];
+            }
+          }
+          // Preserve any extra keys not in reorderedCols
+          for (const k of Object.keys(r)) {
+            if (!Object.prototype.hasOwnProperty.call(newRow, k)) {
+              newRow[k] = r[k];
+            }
+          }
+          // Clear and copy back
+          for (const k of Object.keys(r)) {
+            delete r[k];
+          }
+          Object.assign(r, newRow);
+        };
+
+        if (currentCandidate.id === "root" && Array.isArray(cloned)) {
+          cloned.forEach(reorderInRow);
+        } else if (currentCandidate.id === "__dictionary__") {
+          Object.values(cloned).forEach((v) => {
+            if (v && typeof v === "object") reorderInRow(v as Record<string, unknown>);
+          });
+        } else {
+          const candidateArray = cloned[currentCandidate.id];
+          if (Array.isArray(candidateArray)) {
+            candidateArray.forEach(reorderInRow);
+          }
+        }
+
+        updateTabContent(tab.id, JSON.stringify(cloned, null, 2));
+      } catch {
+        // Guard
+      }
+    },
+    [data, currentCandidate, tab.id, updateTabContent],
+  );
+
   // Inject trailing actions into unified PreviewPanel header
   useEffect(() => {
     if (error || data === null) {
@@ -262,14 +467,42 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
       return;
     }
 
-    setHeaderActions?.(
-      <div className="flex items-center gap-1 select-none">
-        {/* Candidate selector when multiple tabular arrays exist in root object */}
-        {viewMode === "table" && tableAnalysis.candidates.length > 1 && (
+    const modeToggle = tableAnalysis.isTableCompatible ? (
+      <div className="flex items-center rounded-md p-0.5 bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] ml-0.5">
+        <button
+          onClick={() => setViewMode("tree")}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+            viewMode === "tree"
+              ? "bg-[var(--bg-app)] text-[var(--text-highlight)] shadow-xs"
+              : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+          }`}
+          title="View as JSON Tree"
+        >
+          <Braces className="w-3 h-3 text-[var(--accent-yellow)]" />
+          <span>JSON</span>
+        </button>
+        <button
+          onClick={() => setViewMode("table")}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+            viewMode === "table"
+              ? "bg-[var(--bg-app)] text-emerald-500 shadow-xs"
+              : "text-[var(--text-muted)] hover:text-emerald-400"
+          }`}
+          title="Switch to Table View"
+        >
+          <TableIcon className="w-3 h-3 text-emerald-500" />
+          <span>Table</span>
+        </button>
+      </div>
+    ) : null;
+
+    if (viewMode === "table" && currentCandidate) {
+      const tableSelector =
+        tableAnalysis.candidates.length > 1 ? (
           <select
             value={activeCandidateIndex}
             onChange={(e) => setSelectedCandidateIndex(Number(e.target.value))}
-            className="px-1.5 py-0.5 rounded text-[11px] bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-main)] mr-1 focus:outline-none focus:border-[var(--accent)]"
+            className="px-1.5 py-0.5 rounded text-[11px] bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--accent)]"
             title="Select Table"
           >
             {tableAnalysis.candidates.map((c, i) => (
@@ -278,81 +511,66 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
               </option>
             ))}
           </select>
-        )}
+        ) : null;
 
-        {viewMode === "tree" && (
-          <>
-            <button
-              onClick={handleExpandAll}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors"
-              title="Expand All"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span className="hidden md:inline text-[10px]">Expand All</span>
-            </button>
+      setHeaderActions?.(
+        <DataTableHeaderActions
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          columns={currentCandidate.columns}
+          rows={currentCandidate.rows}
+          fileName={`${tab.name.replace(/\.[^/.]+$/, "")}_${currentCandidate.title}`}
+          leftSlot={tableSelector}
+          rightSlot={modeToggle}
+        />,
+      );
+      return () => setHeaderActions?.(null);
+    }
 
-            <button
-              onClick={handleCollapseAll}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors"
-              title="Collapse All"
-            >
-              <Minimize2 className="w-3.5 h-3.5" />
-              <span className="hidden md:inline text-[10px]">Collapse All</span>
-            </button>
+    // Tree View Controls
+    setHeaderActions?.(
+      <div className="flex items-center gap-1.5 select-none">
+        <button
+          onClick={handleExpandAll}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors"
+          title="Expand All"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+          <span className="hidden md:inline text-[10px]">Expand All</span>
+        </button>
 
-            <button
-              onClick={handleCopyPretty}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors border-l border-[var(--border-color)] ml-0.5 pl-1.5"
-              title="Copy Formatted JSON"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
-                  <span className="text-[var(--accent)] font-medium text-[10px]">
-                    Copied
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline text-[10px]">
-                    Copy JSON
-                  </span>
-                </>
-              )}
-            </button>
-          </>
-        )}
+        <button
+          onClick={handleCollapseAll}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors"
+          title="Collapse All"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+          <span className="hidden md:inline text-[10px]">Collapse All</span>
+        </button>
 
-        {/* Toggle between JSON Tree and Table if compatible */}
-        {tableAnalysis.isTableCompatible && (
-          <div className="flex items-center rounded-md p-0.5 bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] mr-1">
-            <button
-              onClick={() => setViewMode("tree")}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                viewMode === "tree"
-                  ? "bg-[var(--bg-app)] text-[var(--text-highlight)] shadow-xs"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-              }`}
-              title="View as JSON Tree"
-            >
-              <Braces className="w-3 h-3 text-[var(--accent-yellow)]" />
-              <span>JSON</span>
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                viewMode === "table"
-                  ? "bg-[var(--bg-app)] text-emerald-500 shadow-xs"
-                  : "text-[var(--text-muted)] hover:text-emerald-400"
-              }`}
-              title="Switch to Table View"
-            >
-              <TableIcon className="w-3 h-3 text-emerald-500" />
-              <span>Table</span>
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleCopyPretty}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)] transition-colors border-l border-[var(--border-color)] ml-0.5 pl-1.5"
+          title="Copy Formatted JSON"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
+              <span className="text-[var(--accent)] font-medium text-[10px]">
+                Copied
+              </span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[10px]">
+                Copy JSON
+              </span>
+            </>
+          )}
+        </button>
+
+        {modeToggle}
       </div>,
     );
 
@@ -363,11 +581,14 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
     error,
     tableAnalysis,
     viewMode,
+    currentCandidate,
     activeCandidateIndex,
+    searchQuery,
+    copied,
+    tab.name,
     handleExpandAll,
     handleCollapseAll,
     handleCopyPretty,
-    copied,
   ]);
 
   if (!rawContent.trim()) {
@@ -400,11 +621,6 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
     );
   }
 
-  // Active candidate for Table View
-  const currentCandidate =
-    tableAnalysis.candidates[activeCandidateIndex] ||
-    tableAnalysis.candidates[0];
-
   if (
     viewMode === "table" &&
     tableAnalysis.isTableCompatible &&
@@ -416,6 +632,13 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
           columns={currentCandidate.columns}
           rows={currentCandidate.rows}
           tableName={`${tab.name.replace(/\.[^/.]+$/, "")}_${currentCandidate.title}`}
+          searchQuery={searchQuery}
+          onUpdateCell={handleUpdateCell}
+          onRenameColumn={handleRenameColumn}
+          onDeleteRow={handleDeleteRow}
+          onDeleteColumn={handleDeleteColumn}
+          onMoveColumn={handleMoveColumn}
+          isReadOnly={Boolean(tab.isLocked)}
         />
       </div>
     );
