@@ -1,6 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Download, ChevronDown, FileCode, Image as ImageIcon } from 'lucide-react';
-import { exportSvgToFile, exportSvgToRaster } from '../services/mermaidExportService';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Download,
+  ChevronDown,
+  FileCode,
+  Image as ImageIcon,
+} from "lucide-react";
+import {
+  exportSvgToFile,
+  exportSvgToRaster,
+} from "../services/mermaidExportService";
+import { sanitizeTabName } from "../../../core/utils/exportNaming";
 
 interface MermaidExportMenuProps {
   svgContent: string;
@@ -10,8 +19,8 @@ interface MermaidExportMenuProps {
 
 export const MermaidExportMenu: React.FC<MermaidExportMenuProps> = ({
   svgContent,
-  baseFileName = 'mermaid-diagram',
-  className = '',
+  baseFileName = "mermaid-diagram",
+  className = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -23,25 +32,26 @@ export const MermaidExportMenu: React.FC<MermaidExportMenuProps> = ({
       }
     };
     if (isOpen) {
-      window.addEventListener('mousedown', handleClickOutside);
-      return () => window.removeEventListener('mousedown', handleClickOutside);
+      window.addEventListener("mousedown", handleClickOutside);
+      return () => window.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen]);
 
-  const cleanName = baseFileName.replace(/\.[^/.]+$/, '');
+  // Process TAB_NAME at the terminal caller logic by sanitizing and stripping existing extension
+  const tabName = sanitizeTabName(baseFileName);
 
-  const handleExport = async (format: 'svg' | 'png' | 'jpeg' | 'webp') => {
+  const handleExport = async (format: "svg" | "png" | "jpeg" | "webp") => {
     setIsOpen(false);
     if (!svgContent) return;
 
     try {
-      if (format === 'svg') {
-        exportSvgToFile(svgContent, `${cleanName}.svg`);
+      if (format === "svg") {
+        exportSvgToFile(svgContent, tabName);
       } else {
-        await exportSvgToRaster(svgContent, format, `${cleanName}.${format === 'jpeg' ? 'jpg' : format}`);
+        await exportSvgToRaster(svgContent, format, tabName);
       }
     } catch (err) {
-      console.error('Failed to export mermaid diagram', err);
+      console.error("Failed to export mermaid diagram", err);
     }
   };
 
@@ -64,47 +74,55 @@ export const MermaidExportMenu: React.FC<MermaidExportMenuProps> = ({
           </div>
 
           <button
-            onClick={() => handleExport('svg')}
+            onClick={() => handleExport("svg")}
             className="w-full px-3 py-1.5 text-left flex items-center justify-between text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <FileCode className="w-3.5 h-3.5 text-purple-400" />
               <span>SVG Vector</span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">.svg</span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              .svg
+            </span>
           </button>
 
           <button
-            onClick={() => handleExport('png')}
+            onClick={() => handleExport("png")}
             className="w-full px-3 py-1.5 text-left flex items-center justify-between text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
               <span>PNG Image</span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">.png</span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              .png
+            </span>
           </button>
 
           <button
-            onClick={() => handleExport('jpeg')}
+            onClick={() => handleExport("jpeg")}
             className="w-full px-3 py-1.5 text-left flex items-center justify-between text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
               <span>JPG Image</span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">.jpg</span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              .jpg
+            </span>
           </button>
 
           <button
-            onClick={() => handleExport('webp')}
+            onClick={() => handleExport("webp")}
             className="w-full px-3 py-1.5 text-left flex items-center justify-between text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
               <span>WEBP Modern</span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">.webp</span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              .webp
+            </span>
           </button>
         </div>
       )}
