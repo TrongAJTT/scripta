@@ -36,6 +36,7 @@ import type { ScriptMetadata } from "./features/scripts/types/script.types";
 import type { DroppedFileItem } from "./core/types/file.types";
 import { UploadCloud, FileCode2, FilePlus2, FileText } from "lucide-react";
 import { InsertCharacterModal } from "./features/editor/components/InsertCharacterModal";
+import { GoToModal } from "./features/editor/components/GoToModal";
 import { GlobalDialogHost } from "./shared/dialog/GlobalDialogHost";
 import { dialog } from "./shared/dialog/dialogStore";
 import { useEditorCommands } from "./features/editor/hooks/useEditorCommands";
@@ -102,6 +103,7 @@ export const App: React.FC = () => {
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isWorkspaceInfoOpen, setIsWorkspaceInfoOpen] = useState(false);
   const [isTabInfoOpen, setIsTabInfoOpen] = useState(false);
+  const [isGoToOpen, setIsGoToOpen] = useState(false);
   const [runningScript, setRunningScript] = useState<ScriptMetadata | null>(
     null,
   );
@@ -242,6 +244,7 @@ export const App: React.FC = () => {
           },
         },
         { id: "edit.findReplace", action: () => toggleSearch(true) },
+        { id: "edit.goTo", action: () => setIsGoToOpen(true) },
         {
           id: "settings.shortcutMapper",
           action: () => setIsShortcutMapperOpen(true),
@@ -530,6 +533,7 @@ export const App: React.FC = () => {
         onRunScript={(script) => setRunningScript(script)}
         onOpenWorkspaceInfo={() => setIsWorkspaceInfoOpen(true)}
         onOpenTabInfo={() => setIsTabInfoOpen(true)}
+        onOpenGoTo={() => setIsGoToOpen(true)}
       />
 
       {/* 2. Main Toolbar */}
@@ -684,6 +688,13 @@ export const App: React.FC = () => {
             isOpen={isInsertCharacterOpen}
             onClose={() => setIsInsertCharacterOpen(false)}
             onInsert={(char) => editorCmds.insertText(char)}
+          />
+
+          {/* Go To Line/Offset/Bookmark Modal */}
+          <GoToModal
+            isOpen={isGoToOpen}
+            onClose={() => setIsGoToOpen(false)}
+            editorCmds={editorCmds}
           />
 
           {/* Drag & Drop Dual-Zone Visual Overlay */}

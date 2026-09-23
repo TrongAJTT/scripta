@@ -204,6 +204,18 @@ export const COMMANDS: Record<CommandId, Command> = {
       meta: false,
     },
   },
+  "edit.goTo": {
+    id: "edit.goTo",
+    label: "Go to...",
+    category: "Edit",
+    defaultKeybinding: {
+      key: "KeyG",
+      alt: false,
+      ctrl: true,
+      shift: false,
+      meta: false,
+    },
+  },
   "edit.duplicateLine": {
     id: "edit.duplicateLine",
     label: "Duplicate Current Line",

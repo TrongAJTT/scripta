@@ -114,5 +114,52 @@ export function useEditorCommands() {
       if (!viewRef.current) return [];
       return bookmarkOps.getBookmarkedLines(viewRef.current);
     },
+    // Navigation / Go to
+    goToLine: (lineNum: number, col = 1) => {
+      runWithView((v) => {
+        const doc = v.state.doc;
+        const targetLineNum = Math.max(1, Math.min(lineNum, doc.lines));
+        const line = doc.line(targetLineNum);
+        const targetCol = Math.max(1, col);
+        const colOffset = Math.min(targetCol - 1, line.length);
+        const targetPos = line.from + colOffset;
+
+        v.dispatch({
+          selection: { anchor: targetPos },
+          scrollIntoView: true,
+        });
+      });
+    },
+    goToOffset: (offset: number) => {
+      runWithView((v) => {
+        const doc = v.state.doc;
+        const targetOffset = Math.max(0, Math.min(offset, doc.length));
+        v.dispatch({
+          selection: { anchor: targetOffset },
+          scrollIntoView: true,
+        });
+      });
+    },
+    getCurrentPosition: () => {
+      const v = viewRef.current;
+      if (!v) {
+        return {
+          line: 1,
+          col: 1,
+          maxLines: 1,
+          offset: 0,
+          maxOffset: 0,
+        };
+      }
+      const head = v.state.selection.main.head;
+      const lineObj = v.state.doc.lineAt(head);
+      return {
+        line: lineObj.number,
+        col: head - lineObj.from + 1,
+        maxLines: v.state.doc.lines,
+        offset: head,
+        maxOffset: v.state.doc.length,
+      };
+    },
   };
 }

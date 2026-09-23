@@ -89,6 +89,7 @@ export interface MenuBarProps {
   onRunScript?: (script: ScriptMetadata) => void;
   onOpenWorkspaceInfo?: () => void;
   onOpenTabInfo?: () => void;
+  onOpenGoTo?: () => void;
 }
 
 export const MenuBar: React.FC<MenuBarProps> = ({
@@ -102,6 +103,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onRunScript,
   onOpenWorkspaceInfo,
   onOpenTabInfo,
+  onOpenGoTo,
 }) => {
   const createTab = useEditorStore((s) => s.createTab);
   const openFileAction = useEditorStore((s) => s.openFileAction);
@@ -369,6 +371,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           label="Find & Replace..."
           commandId="edit.findReplace"
           onSelect={() => toggleSearch(true)}
+        />
+        <DropdownMenu.Item
+          label="Go to..."
+          commandId="edit.goTo"
+          onSelect={() => onOpenGoTo?.()}
         />
         <DropdownMenu.Separator />
 

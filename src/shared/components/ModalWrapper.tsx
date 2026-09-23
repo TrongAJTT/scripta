@@ -14,6 +14,7 @@ export interface ModalWrapperProps {
   footer?: React.ReactNode;
   children: React.ReactNode;
   maxWidthClass?: string; // default 'max-w-3xl'
+  containerHeightClass?: string; // default MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES
 }
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({
@@ -27,6 +28,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   footer,
   children,
   maxWidthClass = "max-w-3xl",
+  containerHeightClass = MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES,
 }) => {
   // Close on Escape
   useEffect(() => {
@@ -51,7 +53,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
-        className={`relative z-10 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-md shadow-xl w-full ${maxWidthClass} flex flex-col ${MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES} overflow-hidden`}
+        className={`relative z-10 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-md shadow-xl w-full ${maxWidthClass} flex flex-col ${containerHeightClass} overflow-hidden`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

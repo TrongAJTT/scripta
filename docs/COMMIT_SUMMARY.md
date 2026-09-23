@@ -7,37 +7,51 @@
 ## 📌 Commit Message
 
 ```text
-feat(preview): unify table header controls, support column reordering, and fix cell editing selection
+feat(editor): implement Go To dialog with Line, Offset, and Bookmark navigation
 
-- Extract reusable DataTableHeaderActions component to adhere to DRY/SOLID principles across CSV and JSON table views.
-- Fix cell text selection bug by selecting text only once upon initiating cell editing rather than on every keystroke.
-- Add "Move Column Left" and "Move Column Right" action items to column context popup menu with boundary-aware disabled states.
-- Enable full 2-way data-binding for CSV and JSON (inline cell editing, column renaming, column reordering, and row/column deletion).
-- Synchronize tabular mutations back to active editor tab with smart type casting for JSON models.
+- Introduce GoToModal supporting 3 distinct navigation tabs (Line, Offset, Bookmark) with instant Enter confirmation.
+- Register `edit.goTo` command with default `Ctrl+G` shortcut and integrate into Edit menu.
+- Support Alt+1/2/3 for rapid tab switching and provide a global info help dialog via Header trailing action.
+- Add `goToLine`, `goToOffset`, and `getCurrentPosition` navigation operations to `useEditorCommands`.
+- Enhance `ModalWrapper` to accept customizable container height classes for compact dialog layouts.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Tabular Presentation Components (`src/features/preview/components/`)
+### 1. Navigation Modal & Shared Infrastructure (`src/features/editor/components/`, `src/shared/components/`)
 
-- [DataTableHeaderActions.tsx](file:///g:/TextEditor/src/features/preview/components/DataTableHeaderActions.tsx):
-  - Extracted shared header toolbar component containing search input, CSV clipboard copy, and CSV file download.
-  - Implemented flexible slot architecture (`leftSlot`, `rightSlot`) allowing adapters to inject custom widgets (such as the JSON table candidate dropdown or format toggles).
-- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
-  - Fixed cell input focus & auto-selection bug: tracked key transition (`prevCellKeyRef`) so `.select()` executes only when entering edit mode, allowing continuous typing without clearing or re-selecting text.
-  - Added `onMoveColumn?: (column: string, direction: 'left' | 'right') => void` prop.
-  - Added "Move Column Left" (`ArrowLeft`) and "Move Column Right" (`ArrowRight`) buttons in column context menu, automatically disabled at boundary column indices.
-  - Provided complete 2-way editing capabilities: inline cell value editing, column header renaming, column reordering, and row/column deletion.
+- [GoToModal.tsx](file:///g:/TextEditor/src/features/editor/components/GoToModal.tsx):
+  - Created a responsive navigation dialog with 3 tabs:
+    - **Line (`Alt+1`)**: Shows current line/column, input field with auto-focus & select, and maximum document line limit.
+    - **Offset (`Alt+2`)**: Shows current character offset, target numeric input, and total document length.
+    - **Bookmark (`Alt+3`)**: Displays active bookmark count badge, keyboard-navigable (`Up`/`Down`/`Enter`) list with line numbers and preview snippets, plus a helpful empty state when no bookmarks exist.
+  - Added header trailing `HelpCircle` button triggering `dialog.alert` via the Global Dialog Host to present shortcuts and navigation guidelines.
+  - Implemented `Enter` to jump & close, `Escape` to cancel, and `Alt+1` / `Alt+2` / `Alt+3` for rapid keyboard tab switching.
+- [ModalWrapper.tsx](file:///g:/TextEditor/src/shared/components/ModalWrapper.tsx):
+  - Added optional `containerHeightClass?: string` prop (defaulting to standard `MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES`) to allow compact modal dialogs such as `GoToModal` to fit with `h-auto max-h-[85vh]` instead of forcing 80vh full height.
 
-### 2. Preview Adapters (`src/features/preview/adapters/`)
+### 2. Editor Operations & Commands Hook (`src/features/editor/hooks/`)
 
-- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
-  - Replaced duplicated header action elements with `<DataTableHeaderActions />`.
-  - Implemented `handleMoveColumn` to shift column positions, re-serialized via `tableToCsv`, and propagated to `updateTabContent`.
-  - Passed `onMoveColumn` to `<DataTable />`.
-- [JsonAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/JsonAdapter.tsx):
-  - Replaced duplicated table view action elements with `<DataTableHeaderActions />`.
-  - Implemented `handleMoveColumn` with key-order preservation across root list, nested property list, and dictionary data models.
-  - Passed `onMoveColumn` to `<DataTable />`.
+- [useEditorCommands.ts](file:///g:/TextEditor/src/features/editor/hooks/useEditorCommands.ts):
+  - Added `goToLine(lineNum: number, col?: number)`: clamps to document range, sets selection anchor, and scrolls line smoothly into view.
+  - Added `goToOffset(offset: number)`: clamps offset to document length and scrolls target position into view.
+  - Added `getCurrentPosition()`: extracts real-time cursor line, column, max document lines, offset, and total document length.
+
+### 3. Command Registry & Global Shortcuts (`src/core/commands/`)
+
+- [types.ts](file:///g:/TextEditor/src/core/commands/types.ts):
+  - Added `"edit.goTo"` to the `CommandId` type union.
+- [registry.ts](file:///g:/TextEditor/src/core/commands/registry.ts):
+  - Registered `"edit.goTo"` under `"Edit"` category with label `"Go to..."` and default keybinding `Ctrl+G` (`Cmd+G` on macOS).
+
+### 4. Layout & App Integration (`src/App.tsx`, `src/app/layout/`)
+
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
+  - Added `"Go to..."` menu item under the `Edit` menu (positioned directly below `Find & Replace...`).
+  - Added `onOpenGoTo` callback to `MenuBarProps` and destructured in `MenuBar`.
+- [App.tsx](file:///g:/TextEditor/src/App.tsx):
+  - Added `isGoToOpen` state toggle.
+  - Bound `edit.goTo` in the global keyboard shortcut dispatcher.
+  - Rendered `<GoToModal />` connected to `editorCmds`.
