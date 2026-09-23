@@ -7,36 +7,74 @@
 ## 📌 Commit Message
 
 ```text
-feat(preview): fix svg exporting and add dynamic export naming
+feat(preview): add JSON table view toggle mode and CSV/TSV file format support
 
-- Fix tainted canvas `SecurityError` during SVG raster export (PNG/JPG/WEBP) by stripping external font/stylesheet references and encoding SVG as base64 data URI.
-- Standardize diagram export filenames to `{TAB_NAME}_svg_{TIMESTAMP_MS}.{ext}` via shared `exportNaming.ts` utility and caller-side tab name sanitization.
-- Centralize anchor-based browser file downloads into shared `triggerFileDownload` utility.
+- Implement JSON table compatibility analyzer (jsonTableUtils.ts) supporting Level 1 lists of objects, key-list records, and shallow Level 2 nesting (<= 4 items as inline chips).
+- Add [JSON | Table] view mode toggle in JsonAdapter.tsx with candidate selector for multi-table payloads while keeping JSON tree view as default.
+- Introduce first-class CSV and TSV support with zero-dependency RFC-4180 parser (csvParser.ts), CsvAdapter.tsx preview, language detection, and emerald table branding.
+- Build reusable DataTable.tsx component featuring global search filtering, multi-state column sorting, responsive pagination, and 1-click CSV copy & export.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Core Utilities (`src/core/utils/`)
+### 1. Core Types, File Detection & Constants (`src/core/`)
 
-- [downloadUtils.ts](file:///g:/TextEditor/src/core/utils/downloadUtils.ts):
-  - Created reusable `triggerFileDownload(source, fileName)` function to centralize browser anchor tag creation, click dispatching, and automatic ObjectURL revocation.
-- [exportNaming.ts](file:///g:/TextEditor/src/core/utils/exportNaming.ts):
-  - Exported `TIMESTAMP_MS` constant token (`"{TIMESTAMP_MS}"`).
-  - Added `sanitizeTabName(rawName)` to clean the `TAB_NAME` portion at caller/terminal logic by stripping file extensions and invalid filename characters.
-  - Added `resolveExportFileName(template, extension)` to substitute the `TIMESTAMP_MS` token with epoch milliseconds and append the clean file extension.
-  - Re-exported `triggerFileDownload` for export workflows.
+- [file.types.ts](file:///g:/TextEditor/src/core/types/file.types.ts):
+  - Added `"csv"` to `SupportedLanguage` and `PreviewType` union types.
+- [fileDetection.ts](file:///g:/TextEditor/src/core/utils/fileDetection.ts):
+  - Mapped `.csv` and `.tsv` extensions to `{ language: "csv", previewType: "csv" }`.
+  - Added `"csv"` mappings to `getDefaultExtensionForLanguage` and `getPreviewTypeForLanguage`.
+  - Added heuristic detector in `detectLanguageFromContent` to detect CSV/TSV patterns by delimiter uniformity across sample lines.
+- [fileTypeIcons.ts](file:///g:/TextEditor/src/core/constants/fileTypeIcons.ts):
+  - Configured emerald spreadsheet color `#10b981` (vibrant) and `#6ee7b7` (pastel) for `csv`.
+  - Assigned `mdiFileTableOutline` icon for CSV/TSV files and preview types.
+- [previewLimits.ts](file:///g:/TextEditor/src/core/constants/previewLimits.ts):
+  - Added baseline performance threshold configuration for `csv` (8,000 lines / 800 KB).
 
-### 2. Diagram Export & File System (`src/features/preview/`, `src/features/file-system/`)
+### 2. Tabular Data Services (`src/features/preview/services/`)
 
-- [mermaidExportService.ts](file:///g:/TextEditor/src/features/preview/services/mermaidExportService.ts):
-  - Formatted export filenames as `${tabName}_svg_${TIMESTAMP_MS}` using `TIMESTAMP_MS` and `resolveExportFileName` for both SVG vector files and raster images (`.png`, `.jpg`, `.webp`).
-  - Switched download triggers to `triggerFileDownload` for automated DOM node handling and URL cleanup.
-  - Fixed `SecurityError: Failed to execute 'toBlob' on 'HTMLCanvasElement': Tainted canvases may not be exported` by sanitizing external fonts/stylesheets (`sanitizeSvgForCanvas`) and encoding SVG as UTF-8 base64 Data URLs.
-- [MermaidExportMenu.tsx](file:///g:/TextEditor/src/features/preview/components/MermaidExportMenu.tsx):
-  - Processed `TAB_NAME` at the terminal/caller logic using `sanitizeTabName(baseFileName)` to strip file extensions and invalid characters before invoking export services.
-- [MarkdownAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/MarkdownAdapter.tsx):
-  - Forwarded `tab.name` prefix into embedded diagram export actions.
-- [fileSystemApi.ts](file:///g:/TextEditor/src/features/file-system/data/fileSystemApi.ts):
-  - Refactored fallback save download to use `triggerFileDownload`.
+- [csvParser.ts](file:///g:/TextEditor/src/features/preview/services/csvParser.ts):
+  - Implemented zero-dependency RFC-4180 compliant CSV and TSV parser.
+  - Added heuristic delimiter detection for `,`, `\t`, `;`, and `|`.
+  - Handled quoted fields, escaped quotes (`""`), carriage returns, and duplicate/empty header normalization.
+  - Exported `tableToCsv` serialization utility for 1-click table exports.
+- [jsonTableUtils.ts](file:///g:/TextEditor/src/features/preview/services/jsonTableUtils.ts):
+  - Built structure analyzer to identify table-compatible JSON payloads (arrays of objects, object containing array properties, dictionary records).
+  - Implemented `analyzeCellValue` to support Level 1 and Level 2 shallow nesting ($\le 4$ items rendered as badges or `key: value` chips; larger objects formatted with count summaries).
+  - Extracted union columns and generated candidate table definitions.
+
+### 3. Reusable Components (`src/features/preview/components/`)
+
+- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
+  - Built high-performance, theme-aware tabular data viewer.
+  - Integrated real-time search filter across all columns with match counter.
+  - Implemented column sorting with support for numeric and alphabetical comparison (ASC / DESC / Natural).
+  - Added pagination controls with customizable page sizes (25, 50, 100, 250, All) for smooth 60 FPS rendering.
+  - Added cell renderers for booleans, numbers, nulls, shallow arrays, and shallow objects.
+  - Added "Copy CSV" to clipboard and "Export CSV" via `triggerFileDownload`.
+
+### 4. Preview Adapters (`src/features/preview/adapters/`, `src/features/preview/components/`)
+
+- [JsonAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/JsonAdapter.tsx):
+  - Kept interactive JSON Tree View as the default view mode.
+  - Added prominent segmented toggle `[JSON | Table]` in the preview toolbar when table compatibility is detected.
+  - Added candidate selector dropdown when a root object contains multiple table candidates.
+  - Integrated `DataTable` component when viewing in Table mode.
+- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
+  - Created dedicated preview adapter for CSV and TSV files.
+  - Injected header toolbar stats including delimiter badge (`CSV (Comma)`, `TSV (Tab)`, etc.) and total row/column counts.
+  - Rendered data using the unified `DataTable` component.
+- [registry.ts](file:///g:/TextEditor/src/features/preview/adapters/registry.ts) & [types.ts](file:///g:/TextEditor/src/features/preview/adapters/types.ts):
+  - Registered `csv` preview adapter with table icon and `CSV` badge.
+- [PreviewPanel.tsx](file:///g:/TextEditor/src/features/preview/components/PreviewPanel.tsx):
+  - Added emerald `TableIcon` mapping in `renderIcon` for `csv` preview panel headers.
+
+### 5. Code Editor & App Layout (`src/features/editor/`, `src/app/layout/`)
+
+- [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx):
+  - Added explicit handling for `"csv"` language in `getLanguageExtension`.
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
+  - Extracted and deduplicated `LANGUAGE_OPTIONS` array shared across desktop and mobile menus.
+  - Added `CSV / TSV` option to Language selection menus.

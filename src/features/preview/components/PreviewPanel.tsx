@@ -11,6 +11,7 @@ import {
   FileText,
   Braces,
   Palette,
+  Table as TableIcon,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { checkPreviewThreshold } from "../../../core/constants/previewLimits";
@@ -72,6 +73,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
         return <Braces className="w-3.5 h-3.5 text-[var(--accent-yellow)]" />;
       case "css":
         return <Palette className="w-3.5 h-3.5 text-pink-400" />;
+      case "csv":
+        return <TableIcon className="w-3.5 h-3.5 text-emerald-500" />;
       case "mermaid":
       case "markdown":
         return <Eye className="w-3.5 h-3.5 text-[var(--accent)]" />;

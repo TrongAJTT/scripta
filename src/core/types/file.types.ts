@@ -6,6 +6,7 @@ export type SupportedLanguage =
   | "html"
   | "css"
   | "json"
+  | "csv"
   | "python"
   | "svg"
   | "xml"
@@ -24,6 +25,7 @@ export type PreviewType =
   | "text"
   | "json"
   | "css"
+  | "csv"
   | "none";
 
 export type PreviewMode = "auto" | "split" | "editor-only" | "preview-only";

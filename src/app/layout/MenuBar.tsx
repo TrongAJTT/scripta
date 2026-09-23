@@ -63,6 +63,21 @@ import {
 import { WELCOME_MD_CONTENT } from "../../core/data/defaultDocuments";
 import { ConvertCaseMenuItems } from "../../features/editor/components/ConvertCaseMenuItems";
 
+const LANGUAGE_OPTIONS: { id: SupportedLanguage; label: string }[] = [
+  { id: "markdown", label: "MARKDOWN" },
+  { id: "csv", label: "CSV / TSV" },
+  { id: "html", label: "HTML" },
+  { id: "javascript", label: "JAVASCRIPT" },
+  { id: "typescript", label: "TYPESCRIPT" },
+  { id: "css", label: "CSS" },
+  { id: "json", label: "JSON" },
+  { id: "python", label: "PYTHON" },
+  { id: "svg", label: "SVG" },
+  { id: "mermaid", label: "MERMAID" },
+  { id: "plaintext", label: "PLAIN TEXT" },
+  { id: "other", label: "OTHER..." },
+];
+
 export interface MenuBarProps {
   onOpenPreferences?: () => void;
   onOpenShortcutMapper?: () => void;
@@ -762,21 +777,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           trigger={<span className={triggerClass}>Language</span>}
           className="overflow-y-auto"
         >
-          {(
-            [
-              { id: "markdown", label: "MARKDOWN" },
-              { id: "html", label: "HTML" },
-              { id: "javascript", label: "JAVASCRIPT" },
-              { id: "typescript", label: "TYPESCRIPT" },
-              { id: "css", label: "CSS" },
-              { id: "json", label: "JSON" },
-              { id: "python", label: "PYTHON" },
-              { id: "svg", label: "SVG" },
-              { id: "mermaid", label: "MERMAID" },
-              { id: "plaintext", label: "PLAIN TEXT" },
-              { id: "other", label: "OTHER..." },
-            ] as { id: SupportedLanguage; label: string }[]
-          ).map((l) => (
+          {LANGUAGE_OPTIONS.map((l) => (
             <DropdownMenu.Item
               key={l.id}
               label={l.label}
@@ -998,21 +999,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             icon={<Code2 className="w-3.5 h-3.5" />}
             alignGutter
           >
-            {(
-              [
-                { id: "markdown", label: "MARKDOWN" },
-                { id: "html", label: "HTML" },
-                { id: "javascript", label: "JAVASCRIPT" },
-                { id: "typescript", label: "TYPESCRIPT" },
-                { id: "css", label: "CSS" },
-                { id: "json", label: "JSON" },
-                { id: "python", label: "PYTHON" },
-                { id: "svg", label: "SVG" },
-                { id: "mermaid", label: "MERMAID" },
-                { id: "plaintext", label: "PLAIN TEXT" },
-                { id: "other", label: "OTHER..." },
-              ] as { id: SupportedLanguage; label: string }[]
-            ).map((l) => (
+            {LANGUAGE_OPTIONS.map((l) => (
               <DropdownMenu.Item
                 key={l.id}
                 label={l.label}

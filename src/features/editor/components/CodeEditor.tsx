@@ -66,7 +66,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const syncContentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncContentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const lastSyncedContentRef = useRef<string>(initialContent);
   const { setView } = useEditorView();
 
@@ -118,6 +120,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         return css();
       case "json":
         return json();
+      case "csv":
+        return []; // Standard tabular text mode
       case "python":
         return python();
       default:

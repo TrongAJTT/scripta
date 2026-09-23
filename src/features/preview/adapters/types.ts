@@ -1,5 +1,5 @@
-import type React from 'react';
-import type { FileTab, PreviewType } from '../../../core/types/file.types';
+import type React from "react";
+import type { FileTab, PreviewType } from "../../../core/types/file.types";
 
 export interface PreviewAdapterProps {
   tab: FileTab;
@@ -10,6 +10,17 @@ export interface PreviewAdapter {
   type: PreviewType;
   title: string;
   badge: string;
-  iconType: 'markdown' | 'mermaid' | 'svg' | 'image' | 'html' | 'console' | 'text' | 'json' | 'css' | 'none';
+  iconType:
+    | "markdown"
+    | "mermaid"
+    | "svg"
+    | "image"
+    | "html"
+    | "console"
+    | "text"
+    | "json"
+    | "css"
+    | "csv"
+    | "none";
   Component: React.ComponentType<PreviewAdapterProps>;
 }

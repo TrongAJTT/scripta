@@ -14,9 +14,14 @@ import {
   mdiGraphOutline,
   mdiCodeBraces,
   mdiFileCodeOutline,
+  mdiFileTableOutline,
   mdiLock,
 } from "@mdi/js";
-import type { SupportedLanguage, PreviewType, TabIconTheme } from "../types/file.types";
+import type {
+  SupportedLanguage,
+  PreviewType,
+  TabIconTheme,
+} from "../types/file.types";
 
 export interface FileIconConfig {
   path: string;
@@ -30,6 +35,7 @@ export interface FileIconConfig {
  */
 export const FILE_TYPE_COLORS: Record<string, string> = {
   json: "#f59e0b", // Amber
+  csv: "#10b981", // Emerald / Spreadsheet green
   markdown: "#38bdf8", // Sky blue
   javascript: "#facc15", // JavaScript Yellow
   typescript: "#3b82f6", // TypeScript Blue
@@ -49,6 +55,7 @@ export const FILE_TYPE_COLORS: Record<string, string> = {
 
 export const PASTEL_FILE_TYPE_COLORS: Record<string, string> = {
   json: "#fbbf24",
+  csv: "#6ee7b7",
   markdown: "#7dd3fc",
   javascript: "#fde047",
   typescript: "#93c5fd",
@@ -79,11 +86,21 @@ export function getFileIconConfig(
 ): FileIconConfig {
   // If user chooses accent or monochrome preset, apply global color
   if (tabIconTheme === "accent") {
-    const rawConfig = getRawFileIconConfig(language, previewType, fileName, "vibrant");
+    const rawConfig = getRawFileIconConfig(
+      language,
+      previewType,
+      fileName,
+      "vibrant",
+    );
     return { path: rawConfig.path, color: "var(--accent)" };
   }
   if (tabIconTheme === "monochrome") {
-    const rawConfig = getRawFileIconConfig(language, previewType, fileName, "vibrant");
+    const rawConfig = getRawFileIconConfig(
+      language,
+      previewType,
+      fileName,
+      "vibrant",
+    );
     return { path: rawConfig.path, color: "var(--text-main)" };
   }
 
@@ -96,7 +113,8 @@ function getRawFileIconConfig(
   fileName?: string,
   tabIconTheme: "vibrant" | "pastel" = "vibrant",
 ): FileIconConfig {
-  const colors = tabIconTheme === "pastel" ? PASTEL_FILE_TYPE_COLORS : FILE_TYPE_COLORS;
+  const colors =
+    tabIconTheme === "pastel" ? PASTEL_FILE_TYPE_COLORS : FILE_TYPE_COLORS;
   if (previewType === "image") {
     return {
       path: mdiFileImageOutline,
@@ -188,12 +206,22 @@ function getRawFileIconConfig(
     };
   }
 
+  if (language === "csv" || previewType === "csv") {
+    return {
+      path: mdiFileTableOutline,
+      color: colors.csv,
+    };
+  }
+
   // Check by file extension if language was set to generic/other
   if (fileName) {
     const ext = fileName.split(".").pop()?.toLowerCase();
     switch (ext) {
       case "json":
         return { path: mdiCodeJson, color: colors.json };
+      case "csv":
+      case "tsv":
+        return { path: mdiFileTableOutline, color: colors.csv };
       case "md":
       case "markdown":
         return { path: mdiLanguageMarkdown, color: colors.markdown };

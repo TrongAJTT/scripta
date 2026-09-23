@@ -119,6 +119,12 @@ export const BASE_PREVIEW_THRESHOLDS: Record<PreviewType, PreviewThreshold> = {
     label: "Text",
     description: "Plain Text & Formatted Data",
   },
+  csv: {
+    maxLines: 8000,
+    maxBytes: 800 * 1024, // 800 KB - Tabular data & CSV grid
+    label: "CSV",
+    description: "Tabular Spreadsheet & Delimited Data",
+  },
   image: {
     maxLines: Infinity,
     maxBytes: 10 * 1024 * 1024, // 10 MB - Raster images
