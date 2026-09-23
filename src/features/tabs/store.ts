@@ -124,6 +124,9 @@ interface EditorState {
   // Preview & View
   setPreviewMode: (mode: PreviewMode) => void;
   toggleSearch: (show?: boolean) => void;
+  bypassedPreviewTabIds: string[];
+  bypassPreviewThreshold: (tabId: string) => void;
+  resetBypassedPreviewThreshold: (tabId?: string) => void;
 
   // Settings
   setTheme: (theme: ThemeMode) => void;
@@ -158,6 +161,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   mermaidTheme: "auto",
   tabIconTheme: "vibrant",
   jsonTheme: "default",
+  previewPerfPreset: "balanced",
 };
 
 function createInitialTab(name = "welcome.md"): FileTab {
@@ -207,6 +211,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   recentFiles: [],
   closedFilesStack: [],
   activeCursorPos: { line: 1, col: 1, selectedChars: 0 },
+  bypassedPreviewTabIds: [],
+
+  bypassPreviewThreshold: (tabId: string) => {
+    set((state) => ({
+      bypassedPreviewTabIds: state.bypassedPreviewTabIds.includes(tabId)
+        ? state.bypassedPreviewTabIds
+        : [...state.bypassedPreviewTabIds, tabId],
+    }));
+  },
+
+  resetBypassedPreviewThreshold: (tabId?: string) => {
+    set((state) => ({
+      bypassedPreviewTabIds: tabId
+        ? state.bypassedPreviewTabIds.filter((id) => id !== tabId)
+        : [],
+    }));
+  },
 
   initStore: async () => {
     // Restore settings from IndexedDB (or fallback to localStorage)
@@ -339,11 +360,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
-    set({
+    set((state) => ({
       tabs: nextTabs,
       activeTabId: nextActiveId,
       recentTabIds: nextRecent,
-    });
+      bypassedPreviewTabIds: state.bypassedPreviewTabIds.filter((tid) => tid !== id),
+    }));
     debouncedSaveSession(nextTabs, nextActiveId);
   },
 

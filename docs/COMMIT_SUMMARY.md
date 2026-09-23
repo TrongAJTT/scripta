@@ -7,51 +7,66 @@
 ## 📌 Commit Message
 
 ```text
-perf(editor): optimize large-file performance and eliminate input lag
+feat(preview): introduce soft thresholds and hardware performance presets for split view
 
-- Implement 300ms debounce on document content synchronization to Zustand store to prevent large string allocations and React tree re-renders on every keystroke.
-- Separate `activeCursorPos` in EditorState and mutate `tab.cursorPos` in-place, preserving `tabs` array reference stability and eliminating keystroke re-renders in TabBar and App.
-- Add zero-data-loss content flush on tab switch/unmount, Ctrl+S, and global save actions (MenuBar, Toolbar, Command Palette).
-- Guard CodeEditor against internal echo updates via `lastSyncedContentRef`.
-- Compute status bar lines and length in O(1) from CodeMirror document state, and memoize byte size calculation.
+- Add format-specific soft thresholds (lines & bytes) in `previewLimits.ts` to automatically pause heavy real-time preview rendering on large documents in Split View.
+- Provide 4 stepped hardware performance presets (Eco 0.5x, Balanced 1.0x, High Spec 2.5x, and Unlimited) with a slider in Preferences > Preview.
+- Introduce `PreviewThresholdFallback` with real-time file metric metrics, "Render Anyway" session bypass, and quick switch to full preview-only mode.
+- Add `bypassedPreviewTabIds` session tracking in Zustand tabs store with automatic cleanup on tab close.
+- Support deep linking into Preferences categories via custom event `open-preferences-modal`.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### Fix 4 bottlenecks:
+### 1. Core Constants & Limits (`src/core/constants/`)
 
-- **doc.toString() 3.8MB + detectLineEnding() every keystroke (highest):** Debounce 300ms content sync
-- **StatusBar: split('\n') + new Blob() every render (High)**: Read from EditorView.state.doc (O(1) B-Tree)
-- **TabBar + App re-render due to s.tabs contains content (High)**: useShallow + narrow selector
-- **detectLineEnding() called redundant in store (Medium)**: Skip if content unchanged
+- [previewLimits.ts](file:///g:/TextEditor/src/core/constants/previewLimits.ts):
+  - Created `BASE_PREVIEW_THRESHOLDS` mapping format-specific baseline soft limits (`maxLines`, `maxBytes`):
+    - **Mermaid**: `400` lines / `25 KB` (CPU-heavy Dagre/D3 layout)
+    - **JSON**: `2,500` lines / `200 KB` (AST and interactive DOM tree nodes)
+    - **SVG**: `2,000` lines / `250 KB` (Vector DOM element injection)
+    - **HTML**: `3,500` lines / `350 KB` (Sandboxed DOM / iframe updates)
+    - **Markdown**: `5,000` lines / `500 KB` (AST parsing and syntax highlight)
+    - **CSS**: `4,000` lines / `300 KB` (AST parsing and stylesheet injection)
+    - **Console**: `3,000` lines / `200 KB` (JavaScript evaluation sandbox)
+    - **Text**: `10,000` lines / `1 MB` (Plain text / tabular data)
+  - Configured 4 hardware presets with multiplier coefficients (`eco`: 0.5x, `balanced`: 1.0x, `performance`: 2.5x, `unlimited`: Infinity).
+  - Added helper functions `checkPreviewThreshold`, `getActivePreviewThreshold`, and `formatBytes`.
 
-### 1. Editor Types (`src/core/types/`)
+### 2. Editor & File Types (`src/core/types/`)
 
-- [file.types.ts](file:///g:/TextEditor/src/core/types/file.types.ts): Added optional `linesCount` and `charsCount` to `CursorPosition` interface so CodeMirror can pass $O(1)$ document metrics directly without string scanning.
+- [file.types.ts](file:///g:/TextEditor/src/core/types/file.types.ts):
+  - Added `PreviewPerformancePreset` type (`"eco" | "balanced" | "performance" | "unlimited"`).
+  - Added optional `previewPerfPreset?: PreviewPerformancePreset` to `EditorSettings`.
 
-### 2. Tab & Editor State Management (`src/features/tabs/`)
+### 3. Tab & View State Management (`src/features/tabs/`)
 
 - [store.ts](file:///g:/TextEditor/src/features/tabs/store.ts):
-  - Added `activeCursorPos` and `flushCurrentTabContent` to `EditorState`.
-  - Updated `updateCursorPos` to update `tab.cursorPos` in-place and only publish `activeCursorPos`, preserving the `state.tabs` array reference on every keystroke/arrow navigation.
-  - Initialized `activeCursorPos` properly during `initStore` and `setActiveTab`.
-  - Added early exit in `updateTabContent` when content is unchanged.
-  - Added synchronous call to `flushCurrentTabContent()` in `saveCurrentTab` and `saveCurrentTabAs` before writing files to ensure no un-synced keystrokes are lost.
+  - Added `previewPerfPreset: "balanced"` to `DEFAULT_SETTINGS`.
+  - Added `bypassedPreviewTabIds: string[]` to `EditorState`.
+  - Implemented `bypassPreviewThreshold(tabId)` to allow rendering on demand per tab for the active session.
+  - Implemented `resetBypassedPreviewThreshold(tabId?)` and automated cleanup on `closeTab`.
 
-### 3. Editor Core & Performance Lifecycle (`src/features/editor/`)
+### 4. Preview Protection & Fallback UI (`src/features/preview/`)
 
-- [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx):
-  - Introduced `syncContentTimeoutRef` (300ms debounce) for document syncing into Zustand store, keeping high-frequency typing operations entirely within CodeMirror's in-memory B-tree.
-  - Implemented `flushDoc` to synchronously flush pending edits before tab switch/component unmount or upon `Mod-s` (Ctrl+S).
-  - Registered `flushCurrentTabContent` in the Zustand store on mount and cleaned up on unmount.
-  - Tracked `lastSyncedContentRef` to eliminate redundant re-dispatch cycles when `content` prop echoes back from the store.
-  - Forwarded `linesCount` and `charsCount` in $O(1)$ from `update.state.doc` via `updateCursorPos`.
+- [PreviewThresholdFallback.tsx](file:///g:/TextEditor/src/features/preview/components/PreviewThresholdFallback.tsx):
+  - Created lightweight, clean fallback card displayed when a document exceeds soft limits in Split View.
+  - Shows line count and payload size compared against active limits.
+  - Provides actions: "Render Anyway" (bypass for session), "Switch to Preview Only View", and "Configure Performance Presets".
+- [PreviewPanel.tsx](file:///g:/TextEditor/src/features/preview/components/PreviewPanel.tsx):
+  - Added `useMemo` threshold check for active tab in `split` and `auto` modes.
+  - Conditionally renders `PreviewThresholdFallback` instead of the heavy adapter component when thresholds are exceeded and not bypassed.
+  - Hides adapter header actions while auto-paused.
 
-### 4. Status Bar Optimization (`src/features/editor/`)
+### 5. Preferences Modal & Settings UI (`src/features/settings/`, `src/`)
 
-- [StatusBar.tsx](file:///g:/TextEditor/src/features/editor/components/StatusBar.tsx):
-  - Subscribed to `s.activeCursorPos` instead of pulling cursor position from `tabs`.
-  - Derived `linesCount` and `charsCount` directly from `cursorPos` in $O(1)$, completely removing `content.split("\n")` calls on every render.
-  - Memoized `byteSize` using `useMemo` based on `activeTab?.content`, preventing repetitive `new Blob` allocations on cursor movements.
+- [PreviewTab.tsx](file:///g:/TextEditor/src/features/settings/components/preferences/PreviewTab.tsx):
+  - Added "Split View Performance & Limits" section with a 4-step hardware profile slider (`Eco` -> `Balanced` -> `High Spec` -> `Unlimited`).
+  - Added an interactive "Active Soft Limits for Current Profile" matrix reflecting dynamically updated limits per file type.
+- [PreferencesModal.tsx](file:///g:/TextEditor/src/features/settings/components/PreferencesModal.tsx):
+  - Added `initialCategory` prop support and state synchronization during render without cascading effect warnings.
+  - Included `previewPerfPreset: "balanced"` in default reset action.
+- [App.tsx](file:///g:/TextEditor/src/App.tsx):
+  - Handled `open-preferences-modal` custom event to open the Preferences dialog directly to the requested category (e.g. `preview`).
