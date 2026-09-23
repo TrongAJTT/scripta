@@ -3,21 +3,49 @@ import type { PreviewAdapterProps } from "./types";
 import { parseCsv, tableToCsv } from "../services/csvParser";
 import { DataTable } from "../components/DataTable";
 import { DataTableHeaderActions } from "../components/DataTableHeaderActions";
+import { CsvDecorationPanel } from "../components/CsvDecorationPanel";
+import {
+  parseDecorationFromCsv,
+  stripDecorationFromCsv,
+  serializeDecorationToCsv,
+} from "../services/csvDecorationStorage";
+import { buildDecorationMap } from "../services/csvDecorationEngine";
+import type { CsvDecorationRule } from "../types/csvDecoration.types";
 import { useEditorStore } from "../../tabs/store";
-import { Table as TableIcon } from "lucide-react";
+import { Table as TableIcon, Palette } from "lucide-react";
 
 export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   tab,
   setHeaderActions,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDecorationOpen, setIsDecorationOpen] = useState(false);
   const updateTabContent = useEditorStore((s) => s.updateTabContent);
 
   const rawContent = tab.content || "";
 
-  const parsed = useMemo(() => {
-    return parseCsv(rawContent);
+  // Extract decoration metadata embedded in the CSV content
+  const decorationConfig = useMemo(() => {
+    return parseDecorationFromCsv(rawContent);
   }, [rawContent]);
+
+  // Clean CSV content without decoration tag for tabular data parsing
+  const cleanContent = useMemo(() => {
+    return stripDecorationFromCsv(rawContent);
+  }, [rawContent]);
+
+  const parsed = useMemo(() => {
+    return parseCsv(cleanContent);
+  }, [cleanContent]);
+
+  // Build high-performance lookup map for decorated rows and cells
+  const decorationMap = useMemo(() => {
+    return buildDecorationMap(
+      decorationConfig.rules,
+      parsed.rows,
+      parsed.columns,
+    );
+  }, [decorationConfig.rules, parsed.rows, parsed.columns]);
 
   const delimiterName = useMemo(() => {
     switch (parsed.delimiter) {
@@ -32,16 +60,36 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     }
   }, [parsed.delimiter]);
 
+  // Helper to persist updated CSV rows while keeping decoration rules intact
+  const commitCsvData = useCallback(
+    (columns: string[], rows: Record<string, string>[]) => {
+      const newCsv = tableToCsv(columns, rows, parsed.delimiter);
+      const withDecoration = serializeDecorationToCsv(newCsv, decorationConfig);
+      updateTabContent(tab.id, withDecoration);
+    },
+    [parsed.delimiter, decorationConfig, tab.id, updateTabContent],
+  );
+
+  // Update decoration rules and serialize into CSV content
+  const handleChangeRules = useCallback(
+    (newRules: CsvDecorationRule[]) => {
+      const withDecoration = serializeDecorationToCsv(cleanContent, {
+        rules: newRules,
+      });
+      updateTabContent(tab.id, withDecoration);
+    },
+    [cleanContent, tab.id, updateTabContent],
+  );
+
   // 2-Way Data-Binding Handlers
   const handleUpdateCell = useCallback(
     (rowIndex: number, column: string, newValue: string) => {
       const newRows = parsed.rows.map((r, i) =>
         i === rowIndex ? { ...r, [column]: newValue } : r,
       );
-      const newCsv = tableToCsv(parsed.columns, newRows, parsed.delimiter);
-      updateTabContent(tab.id, newCsv);
+      commitCsvData(parsed.columns, newRows);
     },
-    [parsed, tab.id, updateTabContent],
+    [parsed.rows, parsed.columns, commitCsvData],
   );
 
   const handleRenameColumn = useCallback(
@@ -61,19 +109,17 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
         }
         return updated;
       });
-      const newCsv = tableToCsv(newColumns, newRows, parsed.delimiter);
-      updateTabContent(tab.id, newCsv);
+      commitCsvData(newColumns, newRows);
     },
-    [parsed, tab.id, updateTabContent],
+    [parsed.columns, parsed.rows, commitCsvData],
   );
 
   const handleDeleteRow = useCallback(
     (rowIndex: number) => {
       const newRows = parsed.rows.filter((_, i) => i !== rowIndex);
-      const newCsv = tableToCsv(parsed.columns, newRows, parsed.delimiter);
-      updateTabContent(tab.id, newCsv);
+      commitCsvData(parsed.columns, newRows);
     },
-    [parsed, tab.id, updateTabContent],
+    [parsed.rows, parsed.columns, commitCsvData],
   );
 
   const handleDeleteColumn = useCallback(
@@ -84,10 +130,9 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
         delete updated[column];
         return updated;
       });
-      const newCsv = tableToCsv(newColumns, newRows, parsed.delimiter);
-      updateTabContent(tab.id, newCsv);
+      commitCsvData(newColumns, newRows);
     },
-    [parsed, tab.id, updateTabContent],
+    [parsed.columns, parsed.rows, commitCsvData],
   );
 
   const handleMoveColumn = useCallback(
@@ -102,15 +147,14 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
       const [removed] = newColumns.splice(idx, 1);
       newColumns.splice(targetIdx, 0, removed);
 
-      const newCsv = tableToCsv(newColumns, parsed.rows, parsed.delimiter);
-      updateTabContent(tab.id, newCsv);
+      commitCsvData(newColumns, parsed.rows);
     },
-    [parsed, tab.id, updateTabContent],
+    [parsed.columns, parsed.rows, commitCsvData],
   );
 
   // Inject unified actions into PreviewPanel header
   useEffect(() => {
-    if (!rawContent.trim() || parsed.columns.length === 0) {
+    if (!cleanContent.trim() || parsed.columns.length === 0) {
       setHeaderActions?.(null);
       return;
     }
@@ -124,9 +168,34 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
         fileName={tab.name.replace(/\.[^/.]+$/, "")}
         delimiter={parsed.delimiter}
         rightSlot={
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] text-[var(--accent)] tracking-tight">
-            {delimiterName}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {/* Decoration Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsDecorationOpen((prev) => !prev)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
+                isDecorationOpen
+                  ? "bg-[var(--accent)]/15 border border-[var(--accent)] text-[var(--accent)] font-medium"
+                  : decorationConfig.rules.length > 0
+                    ? "text-[var(--accent)] hover:bg-[var(--accent)]/20"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)]"
+              }`}
+              title="Manage CSV Visual Highlights & Rules"
+            >
+              <Palette className="w-3 h-3" />
+              <span className="text-[10px] hidden md:inline">Decoration</span>
+              {decorationConfig.rules.length > 0 && (
+                <span className="px-1 rounded-full text-[9px] font-mono bg-[var(--accent)] text-[var(--bg-app)] font-bold">
+                  {decorationConfig.rules.length}
+                </span>
+              )}
+            </button>
+
+            {/* Delimiter Badge */}
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] text-[var(--accent)] tracking-tight">
+              {delimiterName}
+            </span>
+          </div>
         }
       />,
     );
@@ -134,14 +203,16 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     return () => setHeaderActions?.(null);
   }, [
     setHeaderActions,
-    rawContent,
+    cleanContent,
     parsed,
     delimiterName,
     searchQuery,
     tab.name,
+    isDecorationOpen,
+    decorationConfig.rules.length,
   ]);
 
-  if (!rawContent.trim() || parsed.columns.length === 0) {
+  if (!cleanContent.trim() || parsed.columns.length === 0) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] select-none">
         <TableIcon className="w-12 h-12 stroke-[1.2] text-[var(--text-subtle)] mb-3" />
@@ -157,19 +228,33 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   }
 
   return (
-    <div className="h-full w-full overflow-hidden">
-      <DataTable
-        columns={parsed.columns}
-        rows={parsed.rows}
-        tableName={tab.name.replace(/\.[^/.]+$/, "")}
-        searchQuery={searchQuery}
-        onUpdateCell={handleUpdateCell}
-        onRenameColumn={handleRenameColumn}
-        onDeleteRow={handleDeleteRow}
-        onDeleteColumn={handleDeleteColumn}
-        onMoveColumn={handleMoveColumn}
-        isReadOnly={Boolean(tab.isLocked)}
-      />
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      {/* Visual Decoration Drawer */}
+      {isDecorationOpen && (
+        <CsvDecorationPanel
+          rules={decorationConfig.rules}
+          onChangeRules={handleChangeRules}
+          onClose={() => setIsDecorationOpen(false)}
+          columns={parsed.columns}
+        />
+      )}
+
+      {/* Main Data Table */}
+      <div className="flex-1 w-full overflow-hidden">
+        <DataTable
+          columns={parsed.columns}
+          rows={parsed.rows}
+          tableName={tab.name.replace(/\.[^/.]+$/, "")}
+          searchQuery={searchQuery}
+          onUpdateCell={handleUpdateCell}
+          onRenameColumn={handleRenameColumn}
+          onDeleteRow={handleDeleteRow}
+          onDeleteColumn={handleDeleteColumn}
+          onMoveColumn={handleMoveColumn}
+          isReadOnly={Boolean(tab.isLocked)}
+          decorationMap={decorationMap}
+        />
+      </div>
     </div>
   );
 };

@@ -7,51 +7,79 @@
 ## 📌 Commit Message
 
 ```text
-feat(editor): implement Go To dialog with Line, Offset, and Bookmark navigation
+feat(preview): add CSV visual decoration rules and performance limits table
 
-- Introduce GoToModal supporting 3 distinct navigation tabs (Line, Offset, Bookmark) with instant Enter confirmation.
-- Register `edit.goTo` command with default `Ctrl+G` shortcut and integrate into Edit menu.
-- Support Alt+1/2/3 for rapid tab switching and provide a global info help dialog via Header trailing action.
-- Add `goToLine`, `goToOffset`, and `getCurrentPosition` navigation operations to `useEditorCommands`.
-- Enhance `ModalWrapper` to accept customizable container height classes for compact dialog layouts.
+- Implement a rule-based decoration system for CSV preview that lets users highlight rows, cells, or row-index cells based on text/regex pattern matching.
+- Decoration rules are persisted inline within the CSV file as a comment block (# <scripta.csv.decoration>...</scripta.csv.decoration>) and stripped before data parsing, copy, and export.
+- Add ColorPickerPopover shared component using react-colorful with HexAlpha support, solid presets, and a clear action.
+- Refactor Settings > Preview performance limits into a collapsible DataTable (default collapsed), noting CSV is excluded since it uses paging.
+- Add react-colorful to the About dialog's open-source libraries list.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Navigation Modal & Shared Infrastructure (`src/features/editor/components/`, `src/shared/components/`)
+### 1. CSV Decoration Types & Storage (`src/features/preview/types/`, `src/features/preview/services/`)
 
-- [GoToModal.tsx](file:///g:/TextEditor/src/features/editor/components/GoToModal.tsx):
-  - Created a responsive navigation dialog with 3 tabs:
-    - **Line (`Alt+1`)**: Shows current line/column, input field with auto-focus & select, and maximum document line limit.
-    - **Offset (`Alt+2`)**: Shows current character offset, target numeric input, and total document length.
-    - **Bookmark (`Alt+3`)**: Displays active bookmark count badge, keyboard-navigable (`Up`/`Down`/`Enter`) list with line numbers and preview snippets, plus a helpful empty state when no bookmarks exist.
-  - Added header trailing `HelpCircle` button triggering `dialog.alert` via the Global Dialog Host to present shortcuts and navigation guidelines.
-  - Implemented `Enter` to jump & close, `Escape` to cancel, and `Alt+1` / `Alt+2` / `Alt+3` for rapid keyboard tab switching.
-- [ModalWrapper.tsx](file:///g:/TextEditor/src/shared/components/ModalWrapper.tsx):
-  - Added optional `containerHeightClass?: string` prop (defaulting to standard `MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES`) to allow compact modal dialogs such as `GoToModal` to fit with `h-auto max-h-[85vh]` instead of forcing 80vh full height.
+- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts) (**NEW**):
+  - Defines `CsvDecorationRule` with: `scope` (`"all"` | `"column"`), `scopeColumn`, `pattern`, `isRegex`, `target` (`"cell"` | `"row"` | `"index"`), `style` (background, color, bold, italic, underline), `label`, and `enabled`.
+  - Defines `CsvDecorationConfig` and `DecorationMap` for fast O(1) lookup during table rendering.
 
-### 2. Editor Operations & Commands Hook (`src/features/editor/hooks/`)
+- [csvDecorationStorage.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationStorage.ts) (**NEW**):
+  - `parseDecorationFromCsv`: extracts and parses the `# <scripta.csv.decoration>{...}</scripta.csv.decoration>` comment block embedded at the end of CSV content.
+  - `stripDecorationFromCsv`: removes the decoration block before data parsing, copying, or exporting — ensuring clean output.
+  - `serializeDecorationToCsv`: appends or replaces the decoration block at the end of CSV content when rules are saved.
 
-- [useEditorCommands.ts](file:///g:/TextEditor/src/features/editor/hooks/useEditorCommands.ts):
-  - Added `goToLine(lineNum: number, col?: number)`: clamps to document range, sets selection anchor, and scrolls line smoothly into view.
-  - Added `goToOffset(offset: number)`: clamps offset to document length and scrolls target position into view.
-  - Added `getCurrentPosition()`: extracts real-time cursor line, column, max document lines, offset, and total document length.
+- [csvDecorationEngine.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationEngine.ts) (**NEW**):
+  - `buildDecorationMap`: evaluates all active rules in order (first-match-wins priority), scanning either all columns or a specific column per rule, and produces a `DecorationMap` with `rows`, `cells`, and `indexCells` Maps.
 
-### 3. Command Registry & Global Shortcuts (`src/core/commands/`)
+### 2. Decoration Panel UI & Color Picker (`src/features/preview/components/`, `src/shared/components/`)
 
-- [types.ts](file:///g:/TextEditor/src/core/commands/types.ts):
-  - Added `"edit.goTo"` to the `CommandId` type union.
-- [registry.ts](file:///g:/TextEditor/src/core/commands/registry.ts):
-  - Registered `"edit.goTo"` under `"Edit"` category with label `"Go to..."` and default keybinding `Ctrl+G` (`Cmd+G` on macOS).
+- [CsvDecorationPanel.tsx](file:///g:/TextEditor/src/features/preview/components/CsvDecorationPanel.tsx) (**NEW**):
+  - Inline collapsible drawer rendered below the PreviewPanel header.
+  - Unified form for both **adding** and **editing** rules (toggled by the pencil icon on each row).
+  - Scan scope selector: "All Columns" or "Specific Column" (dropdown of actual CSV columns).
+  - Apply target selector: "Entire Row", "Matching Cell(s)", or "Row Number Cell (#)".
+  - Style controls: two `ColorPickerPopover` swatches (background and text color) plus B/I/U toggles.
+  - HTML5 native drag-and-drop for reordering rule priority.
+  - Delete action invokes `dialog.confirm` via Global Dialog Host before removal.
+  - Active edit rule is highlighted with a left accent border.
 
-### 4. Layout & App Integration (`src/App.tsx`, `src/app/layout/`)
+- [ColorPickerPopover.tsx](file:///g:/TextEditor/src/shared/components/ColorPickerPopover.tsx) (**NEW**):
+  - Wraps `react-colorful`'s `HexAlphaColorPicker` with a swatch trigger button.
+  - HEX + alpha manual input field (`#RRGGBBAA`), clear action, and 16 solid preset colors (full Tailwind spectrum).
+  - Uses render-time state derivation (no `useEffect` for value sync) to avoid linter warnings.
 
-- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
-  - Added `"Go to..."` menu item under the `Edit` menu (positioned directly below `Find & Replace...`).
-  - Added `onOpenGoTo` callback to `MenuBarProps` and destructured in `MenuBar`.
-- [App.tsx](file:///g:/TextEditor/src/App.tsx):
-  - Added `isGoToOpen` state toggle.
-  - Bound `edit.goTo` in the global keyboard shortcut dispatcher.
-  - Rendered `<GoToModal />` connected to `editorCmds`.
+### 3. DataTable Integration (`src/features/preview/components/`)
+
+- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
+  - Added optional `decorationMap?: DecorationMap` prop.
+  - Row `<tr>` receives `backgroundColor` from `decorationMap.rows` if set.
+  - Index `<td>` receives background, color, bold, italic, underline from `decorationMap.indexCells`.
+  - Data cells resolve style from `decorationMap.cells` first, then fall back to the row-level style if target is `"row"`.
+
+### 4. CSV Adapter Wiring (`src/features/preview/adapters/`)
+
+- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
+  - Strips decoration block before passing content to `parseCsv` and `DataTableHeaderActions` (copy/export are unaffected by metadata).
+  - Memoizes `decorationConfig`, `cleanContent`, and `decorationMap` independently to minimize re-renders.
+  - `commitCsvData` helper re-serializes decoration rules back into tab content after every data mutation.
+  - Injects a **"Decoration"** button in the `rightSlot` of `DataTableHeaderActions`:
+    - Border highlight appears **only when the panel is open** (not merely when rules exist).
+    - Rule count badge uses `text-[var(--bg-app)]` for dark-mode-safe contrast on the accent background.
+  - Passes `columns` (not `totalRows`) to `CsvDecorationPanel` for scope column selection.
+
+### 5. Settings & About (`src/features/settings/components/`)
+
+- [PreviewTab.tsx](file:///g:/TextEditor/src/features/settings/components/preferences/PreviewTab.tsx):
+  - Refactored the "Split View Performance & Limits" section into a collapsible group (default collapsed) using the existing `DataTable` component.
+  - Displays Format, Max Lines, and Max File Size per hardware preset.
+  - Adds a note explaining CSV is excluded from limits because it already uses automatic paging.
+
+- [AboutModal.tsx](file:///g:/TextEditor/src/features/settings/components/AboutModal.tsx):
+  - Added `"react-colorful"` to the open-source libraries list.
+
+### 6. Dependencies (`package.json`, `pnpm-lock.yaml`)
+
+- Added `react-colorful ^5.8.1` as a runtime dependency.

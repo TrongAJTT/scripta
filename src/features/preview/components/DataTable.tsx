@@ -14,6 +14,8 @@ import {
 import { analyzeCellValue } from "../services/jsonTableUtils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { DecorationMap } from "../types/csvDecoration.types";
+
 export interface DataTableProps {
   columns: string[];
   rows: Record<string, unknown>[];
@@ -25,6 +27,7 @@ export interface DataTableProps {
   onDeleteRow?: (rowIndex: number) => void;
   onDeleteColumn?: (column: string) => void;
   isReadOnly?: boolean;
+  decorationMap?: DecorationMap;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -52,6 +55,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   onDeleteColumn,
   onMoveColumn,
   isReadOnly = false,
+  decorationMap,
 }) => {
   const [sortState, setSortState] = useState<SortState>({
     column: null,
@@ -478,11 +482,18 @@ export const DataTable: React.FC<DataTableProps> = ({
                   ? idx + 1
                   : (currentPage - 1) * pageSize + idx + 1;
                 const realRowIndex = rows.indexOf(row);
+                const rowStyle = decorationMap?.rows.get(realRowIndex);
+                const indexStyle = decorationMap?.indexCells.get(realRowIndex);
 
                 return (
                   <tr
                     key={rowIndex}
                     onContextMenu={(e) => handleRowContextMenu(e, realRowIndex)}
+                    style={
+                      rowStyle?.background
+                        ? { backgroundColor: rowStyle.background }
+                        : undefined
+                    }
                     className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-surface-elevated)]/50 transition-colors group"
                   >
                     {/* Row Index Cell with context menu on right click */}
@@ -490,39 +501,66 @@ export const DataTable: React.FC<DataTableProps> = ({
                       onContextMenu={(e) =>
                         handleRowContextMenu(e, realRowIndex)
                       }
+                      style={{
+                        backgroundColor: indexStyle?.background,
+                        color: indexStyle?.color,
+                        fontWeight: indexStyle?.bold ? "bold" : undefined,
+                        fontStyle: indexStyle?.italic ? "italic" : undefined,
+                        textDecoration: indexStyle?.underline
+                          ? "underline"
+                          : undefined,
+                      }}
                       className="px-3 py-2 text-[10px] font-mono text-[var(--text-subtle)] text-center border-r border-[var(--border-subtle)] select-none cursor-context-menu"
                       title="Right-click for options"
                     >
                       {rowIndex}
                     </td>
-                    {columns.map((col) => (
-                      <td
-                        key={col}
-                        onDoubleClick={() => {
-                          if (!isReadOnly && onUpdateCell) {
-                            const val = row[col];
-                            setEditingCell({
-                              rowIndex: realRowIndex,
-                              col,
-                              value:
-                                val === null || val === undefined
-                                  ? ""
-                                  : typeof val === "object"
-                                    ? JSON.stringify(val)
-                                    : String(val),
-                            });
+                    {columns.map((col) => {
+                      const cellStyle =
+                        decorationMap?.cells.get(`${realRowIndex}:${col}`) ||
+                        (rowStyle &&
+                        !decorationMap?.cells.has(`${realRowIndex}:${col}`)
+                          ? rowStyle
+                          : undefined);
+
+                      return (
+                        <td
+                          key={col}
+                          onDoubleClick={() => {
+                            if (!isReadOnly && onUpdateCell) {
+                              const val = row[col];
+                              setEditingCell({
+                                rowIndex: realRowIndex,
+                                col,
+                                value:
+                                  val === null || val === undefined
+                                    ? ""
+                                    : typeof val === "object"
+                                      ? JSON.stringify(val)
+                                      : String(val),
+                              });
+                            }
+                          }}
+                          style={{
+                            backgroundColor: cellStyle?.background,
+                            color: cellStyle?.color,
+                            fontWeight: cellStyle?.bold ? "bold" : undefined,
+                            fontStyle: cellStyle?.italic ? "italic" : undefined,
+                            textDecoration: cellStyle?.underline
+                              ? "underline"
+                              : undefined,
+                          }}
+                          className="px-3 py-2 text-xs border-r border-[var(--border-subtle)] align-top"
+                          title={
+                            !isReadOnly && onUpdateCell
+                              ? "Double-click to edit cell"
+                              : undefined
                           }
-                        }}
-                        className="px-3 py-2 text-xs border-r border-[var(--border-subtle)] align-top"
-                        title={
-                          !isReadOnly && onUpdateCell
-                            ? "Double-click to edit cell"
-                            : undefined
-                        }
-                      >
-                        {renderCell(row[col], realRowIndex, col)}
-                      </td>
-                    ))}
+                        >
+                          {renderCell(row[col], realRowIndex, col)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}

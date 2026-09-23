@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import mermaid from "mermaid";
-import { Moon, Sun, Laptop, Palette, Eye, RefreshCw } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  Laptop,
+  Palette,
+  Eye,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { useEditorStore } from "../../../tabs/store";
 import type {
   MermaidTheme,
@@ -20,6 +29,7 @@ import {
 import { applyMermaidTheme } from "../../../preview/services/mermaidExportService";
 import { JSON_THEMES } from "../../../../core/constants/jsonThemes";
 import { APP_NAME } from "../../../../core/constants/app";
+import { DataTable } from "../../../preview/components/DataTable";
 
 const SAMPLE_MERMAID = `graph LR
   Client[💻 App UI] -->|Query| API[⚡ Backend]
@@ -112,6 +122,23 @@ export const PreviewTab: React.FC = () => {
     "svg",
     "css",
   ];
+
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+
+  const limitColumns = ["Format", "Max Lines", "Max File Size"];
+
+  const limitRows = previewFormats.map((format) => {
+    const th = getActivePreviewThreshold(format, currentPerfPreset);
+    return {
+      Format: th.label,
+      "Max Lines":
+        th.maxLines === Infinity
+          ? "∞ lines"
+          : `${th.maxLines.toLocaleString()} lines`,
+      "Max File Size":
+        th.maxBytes === Infinity ? "Unlimited" : formatBytes(th.maxBytes),
+    };
+  });
 
   const [previewSvg, setPreviewSvg] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -333,42 +360,37 @@ export const PreviewTab: React.FC = () => {
           </p>
         </div>
 
-        {/* Active Soft Limits Breakdown */}
-        <div className="mt-4">
-          <h4 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2.5">
-            Active Soft Limits for Current Profile
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {previewFormats.map((format) => {
-              const th = getActivePreviewThreshold(format, currentPerfPreset);
-              return (
-                <div
-                  key={format}
-                  className="p-2.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-editor)] flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-[var(--text-main)] capitalize">
-                      {th.label}
-                    </span>
-                    <span className="text-[9px] uppercase font-mono px-1 rounded bg-[var(--bg-surface)] text-[var(--text-muted)]">
-                      {format}
-                    </span>
-                  </div>
-                  <div className="text-[11px] font-mono text-[var(--accent)] font-medium">
-                    {th.maxLines === Infinity
-                      ? "∞ lines"
-                      : `${th.maxLines.toLocaleString()} lines`}
-                  </div>
-                  <div className="text-[10px] text-[var(--text-muted)]">
-                    Max:{" "}
-                    {th.maxBytes === Infinity
-                      ? "Unlimited"
-                      : formatBytes(th.maxBytes)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* Active Soft Limits Breakdown (Collapsible DataTable) */}
+        <div className="mt-4 border border-[var(--border-subtle)] rounded-md overflow-hidden bg-[var(--bg-editor)]">
+          <button
+            type="button"
+            onClick={() => setIsDetailsExpanded((prev) => !prev)}
+            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--bg-surface)] hover:bg-[var(--bg-toolbar)] text-xs text-[var(--text-main)] transition-colors cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              {isDetailsExpanded ? (
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--accent)]" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              )}
+              <span className="font-semibold text-[11px] uppercase tracking-wider text-[var(--text-highlight)]">
+                Active Soft Limits Breakdown
+              </span>
+            </div>
+          </button>
+
+          {isDetailsExpanded && (
+            <div className="p-3 border-t border-[var(--border-subtle)] space-y-3">
+              <div className="rounded border border-[var(--border-color)] overflow-hidden shadow-xs">
+                <DataTable
+                  columns={limitColumns}
+                  rows={limitRows}
+                  tableName="PreviewLimits"
+                  isReadOnly={true}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
