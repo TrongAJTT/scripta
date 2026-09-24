@@ -76,15 +76,18 @@ export const DataTable: React.FC<DataTableProps> = ({
     filterQuery: "",
     currentPage: 1,
     pageSize: 50,
-    sortState: { column: null as string | null, direction: null as "asc" | "desc" | null },
+    sortState: {
+      column: null as string | null,
+      direction: null as "asc" | "desc" | null,
+    },
     isMergedView: false,
   };
 
   const sortState: SortState = session.sortState;
   const setSortState = useCallback(
     (updater: SortState | ((prev: SortState) => SortState)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.sortState
-        ?? { column: null, direction: null };
+      const prev = usePreviewSessionStore.getState().sessions[tabId]
+        ?.sortState ?? { column: null, direction: null };
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { sortState: next });
     },
@@ -94,7 +97,8 @@ export const DataTable: React.FC<DataTableProps> = ({
   const currentPage = session.currentPage;
   const setCurrentPage = useCallback(
     (updater: number | ((prev: number) => number)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.currentPage ?? 1;
+      const prev =
+        usePreviewSessionStore.getState().sessions[tabId]?.currentPage ?? 1;
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { currentPage: next });
     },
@@ -111,7 +115,9 @@ export const DataTable: React.FC<DataTableProps> = ({
   const isMergedView = session.isMergedView;
   const setIsMergedView = useCallback(
     (updater: boolean | ((prev: boolean) => boolean)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.isMergedView ?? false;
+      const prev =
+        usePreviewSessionStore.getState().sessions[tabId]?.isMergedView ??
+        false;
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { isMergedView: next });
     },
@@ -121,7 +127,6 @@ export const DataTable: React.FC<DataTableProps> = ({
   const canMerge = Boolean(mergeConfig && mergeConfig.mode !== "none");
   const effectiveMergedView = canMerge && isMergedView;
   const effectiveReadOnly = isReadOnly || effectiveMergedView;
-
 
   // Editing state for cells and column headers
   const [editingCell, setEditingCell] = useState<{
@@ -269,18 +274,21 @@ export const DataTable: React.FC<DataTableProps> = ({
   }, [effectiveMergedView, mergeConfig, paginatedRows, columns]);
 
   // Handle column header click for sorting
-  const handleSort = useCallback((column: string) => {
-    // If currently renaming this column, don't sort
-    setSortState((prev) => {
-      if (prev.column !== column) {
-        return { column, direction: "asc" };
-      }
-      if (prev.direction === "asc") {
-        return { column, direction: "desc" };
-      }
-      return { column: null, direction: null };
-    });
-  }, [setSortState]);
+  const handleSort = useCallback(
+    (column: string) => {
+      // If currently renaming this column, don't sort
+      setSortState((prev) => {
+        if (prev.column !== column) {
+          return { column, direction: "asc" };
+        }
+        if (prev.direction === "asc") {
+          return { column, direction: "desc" };
+        }
+        return { column: null, direction: null };
+      });
+    },
+    [setSortState],
+  );
 
   // Commit cell changes
   const handleCommitCell = useCallback(() => {
@@ -656,7 +664,10 @@ export const DataTable: React.FC<DataTableProps> = ({
 
       {/* Pagination Footer */}
       {totalRows > 0 && (
-        <div data-no-print="true" className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]">
+        <div
+          data-no-print="true"
+          className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]"
+        >
           {/* Row count summary & Merged View toggle */}
           <div className="flex items-center gap-2">
             <span>

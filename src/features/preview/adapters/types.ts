@@ -23,6 +23,7 @@ export interface PreviewAdapter {
     | "json"
     | "css"
     | "csv"
+    | "latex"
     | "none";
   Component: React.ComponentType<PreviewAdapterProps>;
 }

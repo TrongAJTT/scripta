@@ -131,6 +131,12 @@ export const BASE_PREVIEW_THRESHOLDS: Record<PreviewType, PreviewThreshold> = {
     label: "Image",
     description: "Raster Graphics (PNG, JPG, WebP)",
   },
+  latex: {
+    maxLines: 4000,
+    maxBytes: 400 * 1024, // 400 KB - LaTeX document & math rendering
+    label: "LaTeX",
+    description: "Documents, Math Equations & Scientific Notation",
+  },
   none: {
     maxLines: Infinity,
     maxBytes: Infinity,

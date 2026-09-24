@@ -13,6 +13,7 @@ export type SupportedLanguage =
   | "yaml"
   | "sql"
   | "mermaid"
+  | "latex"
   | "other";
 
 export type PreviewType =
@@ -26,6 +27,7 @@ export type PreviewType =
   | "json"
   | "css"
   | "csv"
+  | "latex"
   | "none";
 
 export type PreviewMode = "auto" | "split" | "editor-only" | "preview-only";

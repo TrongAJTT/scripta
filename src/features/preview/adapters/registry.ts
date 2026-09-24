@@ -10,6 +10,7 @@ import { TextAdapter } from "./TextAdapter";
 import { JsonAdapter } from "./JsonAdapter";
 import { CssAdapter } from "./CssAdapter";
 import { CsvAdapter } from "./CsvAdapter";
+import { LatexAdapter } from "./LatexAdapter";
 import { NoneAdapter } from "./NoneAdapter";
 
 const adapters: Record<PreviewType, PreviewAdapter> = {
@@ -82,6 +83,13 @@ const adapters: Record<PreviewType, PreviewAdapter> = {
     badge: "CSV",
     iconType: "csv",
     Component: CsvAdapter,
+  },
+  latex: {
+    type: "latex",
+    title: "Preview Panel",
+    badge: "LATEX",
+    iconType: "latex",
+    Component: LatexAdapter,
   },
   none: {
     type: "none",

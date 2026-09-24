@@ -143,6 +143,20 @@ export function printLiveElement(element: HTMLElement): void {
         height: auto !important;
         page-break-inside: avoid;
       }
+
+      /* LaTeX paper article container */
+      #${containerId} article {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+
+      /* KaTeX math print styling */
+      #${containerId} .katex {
+        color: #0f172a !important;
+        font-size: 1.05em !important;
+      }
     }
   `;
 

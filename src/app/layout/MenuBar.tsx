@@ -74,6 +74,7 @@ const LANGUAGE_OPTIONS: { id: SupportedLanguage; label: string }[] = [
   { id: "python", label: "PYTHON" },
   { id: "svg", label: "SVG" },
   { id: "mermaid", label: "MERMAID" },
+  { id: "latex", label: "LATEX" },
   { id: "plaintext", label: "PLAIN TEXT" },
   { id: "other", label: "OTHER..." },
 ];

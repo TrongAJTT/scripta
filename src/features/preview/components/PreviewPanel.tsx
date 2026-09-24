@@ -13,6 +13,7 @@ import {
   Palette,
   Table as TableIcon,
   Printer,
+  Binary,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { checkPreviewThreshold } from "../../../core/constants/previewLimits";
@@ -93,6 +94,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
         return <Palette className="w-3.5 h-3.5 text-pink-400" />;
       case "csv":
         return <TableIcon className="w-3.5 h-3.5 text-emerald-500" />;
+      case "latex":
+        return <Binary className="w-3.5 h-3.5 text-[var(--accent-purple)]" />;
       case "mermaid":
       case "markdown":
         return <Eye className="w-3.5 h-3.5 text-[var(--accent)]" />;

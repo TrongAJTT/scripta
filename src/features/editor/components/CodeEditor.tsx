@@ -28,6 +28,8 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { json } from "@codemirror/lang-json";
 import { python } from "@codemirror/lang-python";
+import { StreamLanguage } from "@codemirror/language";
+import { stex } from "@codemirror/legacy-modes/mode/stex";
 
 import type { SupportedLanguage } from "../../../core/types/file.types";
 import { useEditorStore } from "../../tabs/store";
@@ -124,6 +126,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         return []; // Standard tabular text mode
       case "python":
         return python();
+      case "latex":
+        return StreamLanguage.define(stex);
       default:
         return [];
     }
