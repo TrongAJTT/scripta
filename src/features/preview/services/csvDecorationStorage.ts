@@ -1,4 +1,7 @@
-import type { CsvDecorationConfig } from "../types/csvDecoration.types";
+import type {
+  CsvDecorationConfig,
+  CsvMergeConfig,
+} from "../types/csvDecoration.types";
 
 export const CSV_DECORATION_START_TAG = "<scripta.csv.decoration>";
 export const CSV_DECORATION_END_TAG = "</scripta.csv.decoration>";
@@ -14,23 +17,36 @@ const DECORATION_BLOCK_REGEX =
 export function parseDecorationFromCsv(
   rawContent: string,
 ): CsvDecorationConfig {
-  if (!rawContent) return { rules: [] };
+  if (!rawContent) return { rules: [], merge: { mode: "none" } };
 
   const match = rawContent.match(DECORATION_BLOCK_REGEX);
   if (!match || !match[1]) {
-    return { rules: [] };
+    return { rules: [], merge: { mode: "none" } };
   }
 
   try {
     const parsed = JSON.parse(match[1].trim());
-    if (parsed && Array.isArray(parsed.rules)) {
-      return { rules: parsed.rules };
+    if (parsed) {
+      const rules = Array.isArray(parsed.rules) ? parsed.rules : [];
+      const merge: CsvMergeConfig =
+        parsed.merge &&
+        typeof parsed.merge === "object" &&
+        (parsed.merge.mode === "empty" || parsed.merge.mode === "id")
+          ? {
+              mode: parsed.merge.mode,
+              idColumn:
+                typeof parsed.merge.idColumn === "string"
+                  ? parsed.merge.idColumn
+                  : undefined,
+            }
+          : { mode: "none" };
+      return { rules, merge };
     }
   } catch {
     // Malformed JSON inside tag - fallback safely
   }
 
-  return { rules: [] };
+  return { rules: [], merge: { mode: "none" } };
 }
 
 /**
@@ -44,7 +60,7 @@ export function stripDecorationFromCsv(rawContent: string): string {
 
 /**
  * Serializes the CSV decoration configuration into the CSV string.
- * If rules is empty, the decoration block is cleanly stripped.
+ * If rules is empty and merge mode is none, the decoration block is cleanly stripped.
  */
 export function serializeDecorationToCsv(
   rawContent: string,
@@ -52,11 +68,22 @@ export function serializeDecorationToCsv(
 ): string {
   const cleanContent = stripDecorationFromCsv(rawContent).trimEnd();
 
-  if (!config.rules || config.rules.length === 0) {
+  const hasRules = config.rules && config.rules.length > 0;
+  const hasMerge = config.merge && config.merge.mode !== "none";
+
+  if (!hasRules && !hasMerge) {
     return cleanContent;
   }
 
-  const json = JSON.stringify({ rules: config.rules });
+  const payload: Record<string, unknown> = {
+    rules: config.rules || [],
+  };
+
+  if (hasMerge) {
+    payload.merge = config.merge;
+  }
+
+  const json = JSON.stringify(payload);
   const block = `# ${CSV_DECORATION_START_TAG}${json}${CSV_DECORATION_END_TAG}`;
 
   return cleanContent ? `${cleanContent}\r\n${block}` : block;

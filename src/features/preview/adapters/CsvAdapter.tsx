@@ -1,26 +1,40 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useMemo, useEffect, useCallback } from "react";
 import type { PreviewAdapterProps } from "./types";
 import { parseCsv, tableToCsv } from "../services/csvParser";
 import { DataTable } from "../components/DataTable";
 import { DataTableHeaderActions } from "../components/DataTableHeaderActions";
-import { CsvDecorationPanel } from "../components/CsvDecorationPanel";
+import { CsvDecorationModal } from "../components/CsvDecorationModal";
 import {
   parseDecorationFromCsv,
   stripDecorationFromCsv,
   serializeDecorationToCsv,
 } from "../services/csvDecorationStorage";
 import { buildDecorationMap } from "../services/csvDecorationEngine";
-import type { CsvDecorationRule } from "../types/csvDecoration.types";
+import {
+  isAnyDecorationActive,
+  type CsvDecorationRule,
+  type CsvMergeConfig,
+} from "../types/csvDecoration.types";
 import { useEditorStore } from "../../tabs/store";
+import { usePreviewSessionStore } from "../store/previewSessionStore";
 import { Table as TableIcon, Palette } from "lucide-react";
+import { useState } from "react";
 
 export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   tab,
   setHeaderActions,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [isDecorationOpen, setIsDecorationOpen] = useState(false);
   const updateTabContent = useEditorStore((s) => s.updateTabContent);
+
+  // Per-tab session state: filterQuery persists across tab switches
+  const updateSession = usePreviewSessionStore((s) => s.updateSession);
+  const searchQuery =
+    usePreviewSessionStore((s) => s.sessions[tab.id]?.filterQuery) ?? "";
+  const setSearchQuery = useCallback(
+    (q: string) => updateSession(tab.id, { filterQuery: q, currentPage: 1 }),
+    [tab.id, updateSession],
+  );
 
   const rawContent = tab.content || "";
 
@@ -28,6 +42,10 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   const decorationConfig = useMemo(() => {
     return parseDecorationFromCsv(rawContent);
   }, [rawContent]);
+
+  const mergeConfig: CsvMergeConfig = useMemo(() => {
+    return decorationConfig.merge ?? { mode: "none" };
+  }, [decorationConfig.merge]);
 
   // Clean CSV content without decoration tag for tabular data parsing
   const cleanContent = useMemo(() => {
@@ -60,7 +78,7 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     }
   }, [parsed.delimiter]);
 
-  // Helper to persist updated CSV rows while keeping decoration rules intact
+  // Helper to persist updated CSV rows while keeping decoration rules and merge intact
   const commitCsvData = useCallback(
     (columns: string[], rows: Record<string, string>[]) => {
       const newCsv = tableToCsv(columns, rows, parsed.delimiter);
@@ -75,10 +93,23 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     (newRules: CsvDecorationRule[]) => {
       const withDecoration = serializeDecorationToCsv(cleanContent, {
         rules: newRules,
+        merge: decorationConfig.merge,
       });
       updateTabContent(tab.id, withDecoration);
     },
-    [cleanContent, tab.id, updateTabContent],
+    [cleanContent, decorationConfig.merge, tab.id, updateTabContent],
+  );
+
+  // Update merge configuration and serialize into CSV content
+  const handleChangeMerge = useCallback(
+    (newMerge: CsvMergeConfig) => {
+      const withDecoration = serializeDecorationToCsv(cleanContent, {
+        rules: decorationConfig.rules,
+        merge: newMerge,
+      });
+      updateTabContent(tab.id, withDecoration);
+    },
+    [cleanContent, decorationConfig.rules, tab.id, updateTabContent],
   );
 
   // 2-Way Data-Binding Handlers
@@ -169,26 +200,19 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
         delimiter={parsed.delimiter}
         rightSlot={
           <div className="flex items-center gap-1.5">
-            {/* Decoration Toggle Button */}
+            {/* Decoration Modal Button */}
             <button
               type="button"
-              onClick={() => setIsDecorationOpen((prev) => !prev)}
+              onClick={() => setIsDecorationOpen(true)}
               className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
-                isDecorationOpen
+                isAnyDecorationActive(decorationConfig)
                   ? "bg-[var(--accent)]/15 border border-[var(--accent)] text-[var(--accent)] font-medium"
-                  : decorationConfig.rules.length > 0
-                    ? "text-[var(--accent)] hover:bg-[var(--accent)]/20"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)]"
               }`}
-              title="Manage CSV Visual Highlights & Rules"
+              title="Manage CSV Visual Highlights & Automated Row Merging"
             >
               <Palette className="w-3 h-3" />
               <span className="text-[10px] hidden md:inline">Decoration</span>
-              {decorationConfig.rules.length > 0 && (
-                <span className="px-1 rounded-full text-[9px] font-mono bg-[var(--accent)] text-[var(--bg-app)] font-bold">
-                  {decorationConfig.rules.length}
-                </span>
-              )}
             </button>
 
             {/* Delimiter Badge */}
@@ -207,10 +231,15 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     parsed,
     delimiterName,
     searchQuery,
+    setSearchQuery,
     tab.name,
     isDecorationOpen,
-    decorationConfig.rules.length,
+    decorationConfig,
   ]);
+
+  // No custom print override needed: PreviewPanel's printLiveElement prints
+  // the live DataTable DOM directly, preserving all CSS variables, decoration colors,
+  // fonts, borders, and merged view exactly as displayed on screen.
 
   if (!cleanContent.trim() || parsed.columns.length === 0) {
     return (
@@ -229,19 +258,21 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
-      {/* Visual Decoration Drawer */}
-      {isDecorationOpen && (
-        <CsvDecorationPanel
-          rules={decorationConfig.rules}
-          onChangeRules={handleChangeRules}
-          onClose={() => setIsDecorationOpen(false)}
-          columns={parsed.columns}
-        />
-      )}
+      {/* Visual Decoration & Layout Modal */}
+      <CsvDecorationModal
+        isOpen={isDecorationOpen}
+        onClose={() => setIsDecorationOpen(false)}
+        rules={decorationConfig.rules}
+        onChangeRules={handleChangeRules}
+        mergeConfig={mergeConfig}
+        onChangeMerge={handleChangeMerge}
+        columns={parsed.columns}
+      />
 
       {/* Main Data Table */}
       <div className="flex-1 w-full overflow-hidden">
         <DataTable
+          tabId={tab.id}
           columns={parsed.columns}
           rows={parsed.rows}
           tableName={tab.name.replace(/\.[^/.]+$/, "")}
@@ -253,6 +284,7 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
           onMoveColumn={handleMoveColumn}
           isReadOnly={Boolean(tab.isLocked)}
           decorationMap={decorationMap}
+          mergeConfig={mergeConfig}
         />
       </div>
     </div>

@@ -1004,7 +1004,6 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           <DropdownMenu.Sub
             label="Language"
             icon={<Code2 className="w-3.5 h-3.5" />}
-            alignGutter
           >
             {LANGUAGE_OPTIONS.map((l) => (
               <DropdownMenu.Item

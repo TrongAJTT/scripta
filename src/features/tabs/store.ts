@@ -366,6 +366,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       recentTabIds: nextRecent,
       bypassedPreviewTabIds: state.bypassedPreviewTabIds.filter((tid) => tid !== id),
     }));
+    // Clean up in-memory preview session (sort, page, filter, mergedView) for the closed tab
+    import("../preview/store/previewSessionStore").then(({ usePreviewSessionStore }) => {
+      usePreviewSessionStore.getState().clearSession(id);
+    });
     debouncedSaveSession(nextTabs, nextActiveId);
   },
 
