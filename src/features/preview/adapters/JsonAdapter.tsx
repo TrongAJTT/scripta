@@ -629,6 +629,7 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
     return (
       <div className="h-full w-full overflow-hidden">
         <DataTable
+          tabId={tab.id}
           columns={currentCandidate.columns}
           rows={currentCandidate.rows}
           tableName={`${tab.name.replace(/\.[^/.]+$/, "")}_${currentCandidate.title}`}

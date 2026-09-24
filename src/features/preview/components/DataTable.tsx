@@ -24,7 +24,7 @@ import type {
 
 export interface DataTableProps {
   /** Used to persist interactive state (sort, page, pageSize, mergedView) across tab switches. */
-  tabId: string;
+  tabId?: string;
   columns: string[];
   rows: Record<string, unknown>[];
   tableName?: string;
@@ -55,7 +55,7 @@ interface ContextMenuState {
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
-  tabId,
+  tabId = "static-preview",
   columns,
   rows,
   searchQuery = "",
