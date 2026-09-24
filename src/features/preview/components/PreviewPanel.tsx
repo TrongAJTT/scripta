@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import type { FileTab } from "../../../core/types/file.types";
 import { getPreviewAdapter } from "../adapters/registry";
 import {
@@ -12,10 +12,12 @@ import {
   Braces,
   Palette,
   Table as TableIcon,
+  Printer,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { checkPreviewThreshold } from "../../../core/constants/previewLimits";
 import { PreviewThresholdFallback } from "./PreviewThresholdFallback";
+import { printLiveElement } from "../../../core/utils/printUtils";
 
 interface PreviewPanelProps {
   tab: FileTab;
@@ -23,6 +25,8 @@ interface PreviewPanelProps {
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
   const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
+  const [printHandler, setPrintHandler] = useState<(() => void) | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const previewMode = useEditorStore((s) => s.previewMode);
   const settings = useEditorStore((s) => s.settings);
   const bypassedPreviewTabIds = useEditorStore((s) => s.bypassedPreviewTabIds);
@@ -54,6 +58,20 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
     tab.previewType,
     settings.previewPerfPreset,
   ]);
+
+  // Stable wrapper so React state setter accepts (fn | null) correctly
+  const handleSetPrintHandler = useCallback(
+    (fn: (() => void) | null) => setPrintHandler(() => fn),
+    [],
+  );
+
+  const handlePrint = useCallback(() => {
+    if (printHandler) {
+      printHandler();
+    } else if (contentRef.current) {
+      printLiveElement(contentRef.current);
+    }
+  }, [printHandler]);
 
   const renderIcon = () => {
     switch (adapter.iconType) {
@@ -100,14 +118,23 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
           )}
         </div>
 
-        {/* Trailing: Injected UI actions from active adapter (hidden when paused by threshold) */}
+        {/* Trailing: Injected UI actions from active adapter + Print button */}
         <div className="flex items-center gap-1.5 shrink-0">
           {!thresholdResult && headerActions}
+          {!thresholdResult && (
+            <button
+              onClick={handlePrint}
+              title="Print / Export preview"
+              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)]"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Dynamic Adapter Content or Threshold Fallback */}
-      <div className="flex-1 w-full h-full overflow-hidden relative">
+      <div ref={contentRef} className="flex-1 w-full h-full overflow-hidden relative">
         {thresholdResult ? (
           <PreviewThresholdFallback
             tab={tab}
@@ -119,6 +146,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
             key={`${tab.id}-${tab.previewType}`}
             tab={tab}
             setHeaderActions={setHeaderActions}
+            setPrintHandler={handleSetPrintHandler}
           />
         )}
       </div>

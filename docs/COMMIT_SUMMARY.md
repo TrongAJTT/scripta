@@ -7,42 +7,53 @@
 ## 📌 Commit Message
 
 ```text
-feat: add dev console bridge, update modal refinements, and mobile dropdown touch guard
+feat(preview): add per-tab session state and WYSIWYG print export
 
-- Add centralized dev console bridge adapter (src/core/dev/devConsoleBridge.ts) intercepting /version.json in dev mode without contaminating production services.
-- Refine AppUpdateModal layout with improved spacing, rounded banners, and reactive event listener for live mock testing.
-- Fix mobile dropdown top-dialog backdrop event absorption to prevent ghost touch bleed-through onto underlying UI.
-- Clean up MenuBar sub-menu alignment property.
+- Implement in-memory per-tab preview session store (previewSessionStore.ts) persisting filterQuery, currentPage, pageSize, sortState, and isMergedView across tab switches.
+- Add print/export preview capability with live DOM sandbox cloning, theme-aware print styling, and multi-page pagination support.
+- Allow preview adapters to override printing (e.g. HtmlAdapter using native iframe print).
+- Clean up DataTable reactivity, fix search filter rendering loop, and hook clearSession on tab close.
+- Add isAnyDecorationActive helper for responsive decoration indicator state.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. Developer Console Bridge (`src/core/dev/`, `src/main.tsx`)
+### 1. In-Memory Preview Session Management (`src/features/preview/store/`, `src/features/tabs/`)
 
-- [devConsoleBridge.ts](file:///g:/TextEditor/src/core/dev/devConsoleBridge.ts) (**NEW**):
-  - Exposes `window.__SCRIPTA__.updates` namespace alongside root shortcuts `__triggerAppUpdate` and `__resetAppUpdate` for local developer console testing.
-  - Implements network-level `window.fetch` interception for `/version.json` requests during development (`import.meta.env.DEV`), completely isolating mock states away from `updateService.ts`.
-  - Dispatches `open-app-update-modal` custom event on mock trigger/reset.
-- [main.tsx](file:///g:/TextEditor/src/main.tsx):
-  - Automatically initializes `initDevConsoleBridge()` conditionally when running under `import.meta.env.DEV`, allowing zero-overhead tree shaking in production builds.
+- [previewSessionStore.ts](file:///g:/TextEditor/src/features/preview/store/previewSessionStore.ts) (**NEW**):
+  - In-memory Zustand store managing `sessions: Record<string, TabPreviewSession>` per tab ID.
+  - Retains interactive preview parameters (`filterQuery`, `currentPage`, `pageSize`, `sortState`, `isMergedView`) when switching tabs without writing to persistent disk storage (resets on page reload).
+  - Provides `getSession`, `updateSession`, and `clearSession` actions.
+- [store.ts](file:///g:/TextEditor/src/features/tabs/store.ts):
+  - In `closeTab`, dynamically imports `previewSessionStore` to invoke `clearSession(id)` for the closed tab ID, preventing in-memory session leakage.
 
-### 2. App Update Modal Refinements (`src/features/settings/components/`)
+### 2. WYSIWYG Live DOM Print Engine (`src/core/utils/`, `src/features/preview/components/`, `src/features/preview/adapters/`)
 
-- [AppUpdateModal.tsx](file:///g:/TextEditor/src/features/settings/components/AppUpdateModal.tsx):
-  - Subscribes to the `open-app-update-modal` custom event while the dialog is open to trigger immediate re-checks when mock versions change in console.
-  - Refines the "Version is ready to install" prompt banner into a padded rounded card (`p-3 rounded-md border border-[var(--accent)]/40 bg-[var(--accent)]/10`).
-  - Cleans up button iconography and cleans up border spacing across cache diagnosis and bottom safety notes.
+- [printUtils.ts](file:///g:/TextEditor/src/core/utils/printUtils.ts) (**NEW**):
+  - Replaces custom HTML reconstruction with `printLiveElement(element)` for 100% visual fidelity ("What You See Is What You Print").
+  - Clones the target preview element into an isolated DOM sandbox container appended to `document.body`.
+  - Injects isolated `@media print` rules: hides the parent application DOM (`body > *:not(#sandbox)`), unconstrains all nested scroll/overflow heights (`height: auto !important`, `overflow: visible !important`), and unlocks `@page { margin: 12mm; size: auto; }` for natural multi-page pagination.
+  - Automatically neutralizes dark mode styles on print with paper-friendly light theme variables while preserving exact decoration highlights, table lines, and SVG diagrams via `print-color-adjust: exact !important`.
+- [PreviewPanel.tsx](file:///g:/TextEditor/src/features/preview/components/PreviewPanel.tsx):
+  - Adds `Printer` action button to the unified preview header bar.
+  - Supports adapter-level print overrides via `setPrintHandler` with fallback to `printLiveElement(contentRef.current)`.
+- [HtmlAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/HtmlAdapter.tsx):
+  - Hooks `setPrintHandler` to delegate print commands directly to the embedded HTML iframe's own `contentWindow.print()`.
+- [types.ts](file:///g:/TextEditor/src/features/preview/adapters/types.ts):
+  - Extends `PreviewAdapterProps` with `setPrintHandler?: (fn: (() => void) | null) => void`.
 
-### 3. Mobile Dropdown Menu Touch Isolation (`src/shared/components/`)
+### 3. Data Table Reactivity & Print Refinements (`src/features/preview/components/`, `src/features/preview/adapters/`, `src/features/preview/types/`)
 
-- [DropdownMenu.tsx](file:///g:/TextEditor/src/shared/components/DropdownMenu.tsx):
-  - When `topDialogOnMobile` is active, the dimmed full-screen backdrop now swallows `onPointerDown`, `onMouseDown`, `onTouchStart`, and `onClick` with `preventDefault()` and `stopPropagation()`.
-  - Prevents unwanted ghost clicks from activating underlying editor text selections, buttons, or tab switches when tapping outside to close the mobile menu.
-  - Bypasses document-level `pointerdown` listener when top dialog mode handles outside taps.
-
-### 4. MenuBar Layout (`src/app/layout/`)
-
-- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
-  - Removed obsolete `alignGutter` attribute from Language submenu.
+- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
+  - Requires `tabId` prop and binds interactive states (`sortState`, `currentPage`, `pageSize`, `isMergedView`) to `usePreviewSessionStore`.
+  - Fixed render-phase state update loop by moving search-driven page resets into a controlled `useEffect`.
+  - Added `data-no-print="true"` to pagination footer to exclude paging controls from physical printouts.
+- [DataTableHeaderActions.tsx](file:///g:/TextEditor/src/features/preview/components/DataTableHeaderActions.tsx):
+  - Added `select-text` styling classes to search input container to ensure unimpeded text selection and typing events.
+- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
+  - Direct selector subscription for `sessions[tab.id]?.filterQuery` for instant, non-stale input re-renders.
+  - Uses `isAnyDecorationActive(decorationConfig)` to conditionally highlight the Decoration toolbar button.
+- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts):
+  - Added `isAnyDecorationActive(config: CsvDecorationConfig): boolean` utility helper with safe optional chaining on `config.merge?.mode`.

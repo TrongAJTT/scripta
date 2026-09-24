@@ -44,3 +44,10 @@ export interface DecorationMap {
   cells: Map<string, CsvDecorationStyle>; // "rowIndex:colName" -> style
   indexCells: Map<number, CsvDecorationStyle>; // 0-based rowIndex -> style
 }
+
+export function isAnyDecorationActive(config: CsvDecorationConfig): boolean {
+  if (config.rules.length === 0 && (config.merge?.mode ?? "none") === "none") return false;
+  const hasActiveMerge = (config.merge?.mode ?? "none") !== "none";
+  const hasActiveRule = config.rules.some((r) => r.enabled && r.pattern.trim() !== "");
+  return hasActiveMerge || hasActiveRule;
+}

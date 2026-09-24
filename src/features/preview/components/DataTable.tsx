@@ -15,6 +15,7 @@ import {
 import { analyzeCellValue } from "../services/jsonTableUtils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { computeMergeSpanMap } from "../services/csvDecorationEngine";
+import { usePreviewSessionStore } from "../store/previewSessionStore";
 
 import type {
   DecorationMap,
@@ -22,6 +23,8 @@ import type {
 } from "../types/csvDecoration.types";
 
 export interface DataTableProps {
+  /** Used to persist interactive state (sort, page, pageSize, mergedView) across tab switches. */
+  tabId: string;
   columns: string[];
   rows: Record<string, unknown>[];
   tableName?: string;
@@ -52,6 +55,7 @@ interface ContextMenuState {
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
+  tabId,
   columns,
   rows,
   searchQuery = "",
@@ -64,18 +68,60 @@ export const DataTable: React.FC<DataTableProps> = ({
   decorationMap,
   mergeConfig,
 }) => {
-  const [sortState, setSortState] = useState<SortState>({
-    column: null,
-    direction: null,
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(50);
+  // Per-tab session state — select sessions[tabId] directly so Zustand
+  // can detect changes and trigger re-renders correctly.
+  const updateSession = usePreviewSessionStore((s) => s.updateSession);
+  const rawSession = usePreviewSessionStore((s) => s.sessions[tabId]);
+  const session = rawSession ?? {
+    filterQuery: "",
+    currentPage: 1,
+    pageSize: 50,
+    sortState: { column: null as string | null, direction: null as "asc" | "desc" | null },
+    isMergedView: false,
+  };
+
+  const sortState: SortState = session.sortState;
+  const setSortState = useCallback(
+    (updater: SortState | ((prev: SortState) => SortState)) => {
+      const prev = usePreviewSessionStore.getState().sessions[tabId]?.sortState
+        ?? { column: null, direction: null };
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      updateSession(tabId, { sortState: next });
+    },
+    [tabId, updateSession],
+  );
+
+  const currentPage = session.currentPage;
+  const setCurrentPage = useCallback(
+    (updater: number | ((prev: number) => number)) => {
+      const prev = usePreviewSessionStore.getState().sessions[tabId]?.currentPage ?? 1;
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      updateSession(tabId, { currentPage: next });
+    },
+    [tabId, updateSession],
+  );
+
+  const pageSize = session.pageSize;
+  const setPageSize = useCallback(
+    (size: number) => updateSession(tabId, { pageSize: size }),
+    [tabId, updateSession],
+  );
 
   // Auto-merge view state (toggleable via footer button)
-  const [isMergedView, setIsMergedView] = useState(false);
+  const isMergedView = session.isMergedView;
+  const setIsMergedView = useCallback(
+    (updater: boolean | ((prev: boolean) => boolean)) => {
+      const prev = usePreviewSessionStore.getState().sessions[tabId]?.isMergedView ?? false;
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      updateSession(tabId, { isMergedView: next });
+    },
+    [tabId, updateSession],
+  );
+
   const canMerge = Boolean(mergeConfig && mergeConfig.mode !== "none");
   const effectiveMergedView = canMerge && isMergedView;
   const effectiveReadOnly = isReadOnly || effectiveMergedView;
+
 
   // Editing state for cells and column headers
   const [editingCell, setEditingCell] = useState<{
@@ -147,12 +193,10 @@ export const DataTable: React.FC<DataTableProps> = ({
     };
   }, [contextMenu]);
 
-  // Reset page when search query changes without cascading effect renders
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
-  if (prevSearchQuery !== searchQuery) {
-    setPrevSearchQuery(searchQuery);
-    setCurrentPage(1);
-  }
+  // Reset page when search query changes
+  useEffect(() => {
+    updateSession(tabId, { currentPage: 1 });
+  }, [searchQuery, tabId, updateSession]);
 
   // Filter rows based on search query across all columns
   const filteredRows = useMemo(() => {
@@ -236,7 +280,7 @@ export const DataTable: React.FC<DataTableProps> = ({
       }
       return { column: null, direction: null };
     });
-  }, []);
+  }, [setSortState]);
 
   // Commit cell changes
   const handleCommitCell = useCallback(() => {
@@ -612,7 +656,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
       {/* Pagination Footer */}
       {totalRows > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]">
+        <div data-no-print="true" className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]">
           {/* Row count summary & Merged View toggle */}
           <div className="flex items-center gap-2">
             <span>
@@ -656,7 +700,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
+                  updateSession(tabId, { currentPage: 1 });
                 }}
                 className="px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-color)] text-[11px] text-[var(--text-main)] focus:outline-none focus:border-[var(--accent)]"
               >

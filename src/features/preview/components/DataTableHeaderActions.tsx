@@ -53,14 +53,14 @@ export const DataTableHeaderActions: React.FC<DataTableHeaderActionsProps> = ({
       {leftSlot}
 
       {/* Unified Search Input */}
-      <div className="relative flex items-center min-w-[100px] max-w-[120px] md:max-w-[150px]">
-        <Search className="absolute left-2 w-3 h-3 text-[var(--text-subtle)] pointer-events-none" />
+      <div className="relative flex items-center min-w-[100px] max-w-[120px] md:max-w-[150px] select-text">
+        <Search className="absolute left-2 w-3 h-3 text-[var(--text-subtle)] pointer-events-none select-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="Filter rows..."
-          className="w-full pl-6 pr-2 py-0.5 text-[11px] rounded bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] text-[var(--text-main)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          className="w-full pl-6 pr-2 py-0.5 text-[11px] rounded bg-[var(--bg-surface-elevated)] border border-[var(--border-color)] text-[var(--text-main)] placeholder-[var(--text-subtle)] focus:outline-none focus:border-[var(--accent)] transition-colors select-text"
         />
       </div>
 
