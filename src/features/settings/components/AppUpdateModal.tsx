@@ -8,7 +8,6 @@ import {
   HardDrive,
   Cpu,
   Clock,
-  ArrowRight,
 } from "lucide-react";
 import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 import { APP_NAME, APP_VERSION } from "../../../core/constants/app";
@@ -52,7 +51,16 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     const timer = setTimeout(() => {
       void runCheck();
     }, 0);
-    return () => clearTimeout(timer);
+
+    const handleRefresh = () => {
+      void runCheck();
+    };
+    window.addEventListener("open-app-update-modal", handleRefresh);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("open-app-update-modal", handleRefresh);
+    };
   }, [isOpen, runCheck]);
 
   const handleForceUpdate = async () => {
@@ -158,7 +166,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         {/* Update Action Prompt if update available */}
         {result?.hasUpdate && (
-          <div className="pt-4 border-t border-[var(--accent)]/40 bg-[var(--accent)]/10 flex items-center justify-between gap-3">
+          <div className="p-3 rounded-md border border-[var(--accent)]/40 bg-[var(--accent)]/10 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-[var(--text-highlight)]">
                 Version {result.latestVersion} is ready to install
@@ -173,18 +181,13 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               disabled={clearing}
               className="px-3 py-1.5 rounded-sm bg-[var(--accent)] text-black font-semibold text-xs shrink-0 flex items-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
             >
-              {clearing ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <ArrowRight className="w-3.5 h-3.5" />
-              )}
               <span>{clearing ? "Updating..." : "Update Now"}</span>
             </button>
           </div>
         )}
 
         {/* Cache Storage Diagnosis & Force Purge */}
-        <div className="pt-4 border-t border-[var(--border-color)] bg-[var(--bg-surface)] space-y-3">
+        <div className="pt-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] font-medium flex items-center gap-1.5">
               <HardDrive className="w-3.5 h-3.5" />
@@ -215,7 +218,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-between border-t border-[var(--border-subtle)]">
+          <div className="pt-4 flex items-center justify-between">
             <span className="text-[11px] text-[var(--text-muted)]">
               ✓ Preserves your files & workspaces safely in IndexedDB
             </span>

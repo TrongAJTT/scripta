@@ -7,66 +7,42 @@
 ## 📌 Commit Message
 
 ```text
-feat(preview): add CSV decoration modal with auto-merge rows and card picker
+feat: add dev console bridge, update modal refinements, and mobile dropdown touch guard
 
-- Refactor CSV Visual Decoration from an inline sub-panel into a tabbed modal dialog (Highlight Rules and Auto-Merge Rows) with comfortable internal padding.
-- Add Auto-Merge Rows capability supporting "Merge if Empty" (consecutive blank cells below) and "Merge by ID Reference Column" (consecutive rows sharing the same identifier).
-- Implement read-only Merged View toggle in DataTable footer, computing rowSpan matrices while preserving full physical row-index numbering and topmost decoration anchors.
-- Convert Select Merge Mode into a unified CardPicker component supporting single-column vertical layout with clear descriptions and iconography.
-- Persist merge configuration alongside decoration rules inside the inline CSV comment block (# <scripta.csv.decoration>{ rules, merge }</scripta.csv.decoration>).
+- Add centralized dev console bridge adapter (src/core/dev/devConsoleBridge.ts) intercepting /version.json in dev mode without contaminating production services.
+- Refine AppUpdateModal layout with improved spacing, rounded banners, and reactive event listener for live mock testing.
+- Fix mobile dropdown top-dialog backdrop event absorption to prevent ghost touch bleed-through onto underlying UI.
+- Clean up MenuBar sub-menu alignment property.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. CSV Decoration & Merge Types (`src/features/preview/types/`)
+### 1. Developer Console Bridge (`src/core/dev/`, `src/main.tsx`)
 
-- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts):
-  - Added `CsvMergeMode = "none" | "empty" | "id"`.
-  - Added `CsvMergeConfig` interface (`mode`, optional `idColumn`).
-  - Added `CellSpanInfo` (`rowSpan`: $\ge 1$ for visible anchor cells, $0$ for collapsed/hidden cells) and `MergeSpanMap` dictionary type.
-  - Extended `CsvDecorationConfig` to include optional `merge?: CsvMergeConfig`.
+- [devConsoleBridge.ts](file:///g:/TextEditor/src/core/dev/devConsoleBridge.ts) (**NEW**):
+  - Exposes `window.__SCRIPTA__.updates` namespace alongside root shortcuts `__triggerAppUpdate` and `__resetAppUpdate` for local developer console testing.
+  - Implements network-level `window.fetch` interception for `/version.json` requests during development (`import.meta.env.DEV`), completely isolating mock states away from `updateService.ts`.
+  - Dispatches `open-app-update-modal` custom event on mock trigger/reset.
+- [main.tsx](file:///g:/TextEditor/src/main.tsx):
+  - Automatically initializes `initDevConsoleBridge()` conditionally when running under `import.meta.env.DEV`, allowing zero-overhead tree shaking in production builds.
 
-### 2. Serialization & Engine Updates (`src/features/preview/services/`)
+### 2. App Update Modal Refinements (`src/features/settings/components/`)
 
-- [csvDecorationStorage.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationStorage.ts):
-  - Updated `parseDecorationFromCsv` to extract and validate `merge` settings with fallback to `{ mode: "none" }`.
-  - Updated `serializeDecorationToCsv` to include the `merge` payload whenever active, stripping the block if both rules and merge are empty/none.
+- [AppUpdateModal.tsx](file:///g:/TextEditor/src/features/settings/components/AppUpdateModal.tsx):
+  - Subscribes to the `open-app-update-modal` custom event while the dialog is open to trigger immediate re-checks when mock versions change in console.
+  - Refines the "Version is ready to install" prompt banner into a padded rounded card (`p-3 rounded-md border border-[var(--accent)]/40 bg-[var(--accent)]/10`).
+  - Cleans up button iconography and cleans up border spacing across cache diagnosis and bottom safety notes.
 
-- [csvDecorationEngine.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationEngine.ts):
-  - Added `computeMergeSpanMap(rows, columns, mergeConfig)` pure function:
-    - `"empty"` mode: Scans each column top-to-bottom, accumulating `rowSpan` on the non-empty anchor cell and zeroing subsequent empty cells.
-    - `"id"` mode: Groups contiguous row records sharing the same `idColumn` value into a consolidated block for the reference column. For all other columns, only downward blank/empty cells are merged into their preceding non-empty anchor, preserving populated cells across grouped rows.
+### 3. Mobile Dropdown Menu Touch Isolation (`src/shared/components/`)
 
-### 3. Modal Architecture & CardPicker UI (`src/features/preview/components/`, `src/shared/components/`)
+- [DropdownMenu.tsx](file:///g:/TextEditor/src/shared/components/DropdownMenu.tsx):
+  - When `topDialogOnMobile` is active, the dimmed full-screen backdrop now swallows `onPointerDown`, `onMouseDown`, `onTouchStart`, and `onClick` with `preventDefault()` and `stopPropagation()`.
+  - Prevents unwanted ghost clicks from activating underlying editor text selections, buttons, or tab switches when tapping outside to close the mobile menu.
+  - Bypasses document-level `pointerdown` listener when top dialog mode handles outside taps.
 
-- [CsvDecorationModal.tsx](file:///g:/TextEditor/src/features/preview/components/CsvDecorationModal.tsx) (**NEW**):
-  - Replaces inline drawer panel with a clean `ModalWrapper` dialog (`max-w-3xl`) featuring standard `p-5` body padding.
-  - **Tab 1 ("Highlight Rules")**: Full rule management interface (Add/Edit form, regex toggle, column scoping, target selector, ColorPickerPopover, B/I/U toggles, drag-and-drop reordering, and global dialog deletion confirm).
-  - **Tab 2 ("Auto-Merge Rows")**: Configures table consolidation using `CardPicker`:
-    - **Disabled (Default)**: Normal flat table layout with full inline editing.
-    - **Merge if Empty**: Automatic downward blank cell consolidation.
-    - **Merge by ID Reference Column**: Grouping rows by an identifier column (with other columns merged only when empty) and an interactive column dropdown selector.
+### 4. MenuBar Layout (`src/app/layout/`)
 
-- [CardPicker.tsx](file:///g:/TextEditor/src/shared/components/CardPicker.tsx):
-  - Added support for `columns={1}` (vertical card stack) in addition to 2, 3, and 4 column grid modes.
-
-### 4. DataTable Integration & Merged View (`src/features/preview/components/`)
-
-- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
-  - Accepts `mergeConfig?: CsvMergeConfig` prop.
-  - Added `isMergedView` local toggle and `effectiveReadOnly = isReadOnly || effectiveMergedView`.
-  - Computes `mergeSpanMap` dynamically for the current visible `paginatedRows`.
-  - In `<tbody>`: renders `<td rowSpan={span.rowSpan}>` for anchor cells and omits rendering `<td>` when `span.rowSpan === 0`.
-  - Automatically vertically centers content (`align-middle` / `verticalAlign: "middle"`) for any cells spanning multiple rows (`rowSpan > 1`).
-  - Preserves exact physical row index numbers (`#` column) for auditing and navigation.
-  - Naturally applies decoration rules from the topmost anchor row to cover the full merged block.
-  - Added **"Render Merged" / "Merged View: ON"** toggle button at the footer summary bar (adjacent to total row/column counts).
-
-### 5. CSV Preview Adapter Wiring (`src/features/preview/adapters/`)
-
-- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
-  - Replaced `CsvDecorationPanel` with `CsvDecorationModal`.
-  - Added `handleChangeMerge` handler and integrated `mergeConfig` into `commitCsvData` and `handleChangeRules`.
-  - Updated header **Decoration** button badge to display rule count plus a `M` indicator when auto-merge is active.
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
+  - Removed obsolete `alignGutter` attribute from Language submenu.
