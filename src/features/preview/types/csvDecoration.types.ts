@@ -21,9 +21,23 @@ export interface CsvDecorationRule {
   label?: string;
 }
 
+export type CsvMergeMode = "none" | "empty" | "id";
+
+export interface CsvMergeConfig {
+  mode: CsvMergeMode;
+  idColumn?: string; // Column name when mode is "id"
+}
+
 export interface CsvDecorationConfig {
   rules: CsvDecorationRule[];
+  merge?: CsvMergeConfig;
 }
+
+export interface CellSpanInfo {
+  rowSpan: number; // >= 1: render td with rowSpan; 0: hidden (part of merged cell)
+}
+
+export type MergeSpanMap = Record<number, Record<string, CellSpanInfo>>;
 
 export interface DecorationMap {
   rows: Map<number, CsvDecorationStyle>; // 0-based rowIndex -> style

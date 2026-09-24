@@ -10,11 +10,16 @@ import {
   Search,
   Trash2,
   Edit2,
+  Rows3,
 } from "lucide-react";
 import { analyzeCellValue } from "../services/jsonTableUtils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { computeMergeSpanMap } from "../services/csvDecorationEngine";
 
-import type { DecorationMap } from "../types/csvDecoration.types";
+import type {
+  DecorationMap,
+  CsvMergeConfig,
+} from "../types/csvDecoration.types";
 
 export interface DataTableProps {
   columns: string[];
@@ -28,6 +33,7 @@ export interface DataTableProps {
   onDeleteColumn?: (column: string) => void;
   isReadOnly?: boolean;
   decorationMap?: DecorationMap;
+  mergeConfig?: CsvMergeConfig;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -56,6 +62,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   onMoveColumn,
   isReadOnly = false,
   decorationMap,
+  mergeConfig,
 }) => {
   const [sortState, setSortState] = useState<SortState>({
     column: null,
@@ -63,6 +70,12 @@ export const DataTable: React.FC<DataTableProps> = ({
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(50);
+
+  // Auto-merge view state (toggleable via footer button)
+  const [isMergedView, setIsMergedView] = useState(false);
+  const canMerge = Boolean(mergeConfig && mergeConfig.mode !== "none");
+  const effectiveMergedView = canMerge && isMergedView;
+  const effectiveReadOnly = isReadOnly || effectiveMergedView;
 
   // Editing state for cells and column headers
   const [editingCell, setEditingCell] = useState<{
@@ -205,6 +218,12 @@ export const DataTable: React.FC<DataTableProps> = ({
     return sortedRows.slice(start, start + pageSize);
   }, [sortedRows, currentPage, pageSize, isAllPages]);
 
+  // Calculate merge span map for the current displayed page
+  const mergeSpanMap = useMemo(() => {
+    if (!effectiveMergedView || !mergeConfig) return null;
+    return computeMergeSpanMap(paginatedRows, columns, mergeConfig);
+  }, [effectiveMergedView, mergeConfig, paginatedRows, columns]);
+
   // Handle column header click for sorting
   const handleSort = useCallback((column: string) => {
     // If currently renaming this column, don't sort
@@ -250,7 +269,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   // Open context menu for row
   const handleRowContextMenu = (e: React.MouseEvent, rowIndex: number) => {
-    if (isReadOnly || !onDeleteRow) return;
+    if (effectiveReadOnly || !onDeleteRow) return;
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({
@@ -263,7 +282,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   // Open context menu for column
   const handleColContextMenu = (e: React.MouseEvent, column: string) => {
-    if (isReadOnly || (!onRenameColumn && !onDeleteColumn)) return;
+    if (effectiveReadOnly || (!onRenameColumn && !onDeleteColumn)) return;
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({
@@ -441,13 +460,17 @@ export const DataTable: React.FC<DataTableProps> = ({
                       ) : (
                         <div
                           onDoubleClick={(e) => {
-                            if (!isReadOnly && onRenameColumn) {
+                            if (!effectiveReadOnly && onRenameColumn) {
                               e.stopPropagation();
                               setEditingColumn({ oldName: col, value: col });
                             }
                           }}
                           className="flex items-center justify-between gap-2"
-                          title="Double-click to rename"
+                          title={
+                            effectiveReadOnly
+                              ? undefined
+                              : "Double-click to rename"
+                          }
                         >
                           <span className="truncate">{col}</span>
                           <button
@@ -516,6 +539,15 @@ export const DataTable: React.FC<DataTableProps> = ({
                       {rowIndex}
                     </td>
                     {columns.map((col) => {
+                      // In merged view: if this cell is merged into an earlier cell, omit td
+                      const span = mergeSpanMap?.[idx]?.[col];
+                      if (span && span.rowSpan === 0) {
+                        return null;
+                      }
+
+                      const rowSpanAttr =
+                        span && span.rowSpan > 1 ? span.rowSpan : undefined;
+
                       const cellStyle =
                         decorationMap?.cells.get(`${realRowIndex}:${col}`) ||
                         (rowStyle &&
@@ -526,8 +558,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                       return (
                         <td
                           key={col}
+                          rowSpan={rowSpanAttr}
                           onDoubleClick={() => {
-                            if (!isReadOnly && onUpdateCell) {
+                            if (!effectiveReadOnly && onUpdateCell) {
                               const val = row[col];
                               setEditingCell({
                                 rowIndex: realRowIndex,
@@ -549,10 +582,18 @@ export const DataTable: React.FC<DataTableProps> = ({
                             textDecoration: cellStyle?.underline
                               ? "underline"
                               : undefined,
+                            verticalAlign:
+                              rowSpanAttr && rowSpanAttr > 1
+                                ? "middle"
+                                : undefined,
                           }}
-                          className="px-3 py-2 text-xs border-r border-[var(--border-subtle)] align-top"
+                          className={`px-3 py-2 text-xs border-r border-[var(--border-subtle)] ${
+                            rowSpanAttr && rowSpanAttr > 1
+                              ? "align-middle"
+                              : "align-top"
+                          }`}
                           title={
-                            !isReadOnly && onUpdateCell
+                            !effectiveReadOnly && onUpdateCell
                               ? "Double-click to edit cell"
                               : undefined
                           }
@@ -572,13 +613,39 @@ export const DataTable: React.FC<DataTableProps> = ({
       {/* Pagination Footer */}
       {totalRows > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]">
-          {/* Row count summary */}
+          {/* Row count summary & Merged View toggle */}
           <div className="flex items-center gap-2">
             <span>
               Total <strong>{totalRows}</strong>{" "}
               {totalRows === 1 ? "row" : "rows"}
               {columns.length > 0 && ` • ${columns.length} columns`}
             </span>
+
+            {/* Render Merged View button */}
+            {canMerge && (
+              <>
+                <div className="h-3 w-[1px] bg-[var(--border-color)]" />
+                <button
+                  type="button"
+                  onClick={() => setIsMergedView((prev) => !prev)}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold transition cursor-pointer ${
+                    effectiveMergedView
+                      ? "bg-[var(--accent-blue)] text-white shadow-xs"
+                      : "text-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/15 border border-[var(--accent-blue)]/30"
+                  }`}
+                  title={
+                    effectiveMergedView
+                      ? "Exit Merged View (switch back to editable table)"
+                      : `Render Merged View (Read-only, ${mergeConfig?.mode === "empty" ? "If Empty" : `By ID: ${mergeConfig?.idColumn}`})`
+                  }
+                >
+                  <Rows3 className="w-3.5 h-3.5" />
+                  <span>
+                    {effectiveMergedView ? "Merged View: ON" : "Render Merged"}
+                  </span>
+                </button>
+              </>
+            )}
 
             <div className="h-3 w-[1px] bg-[var(--border-color)] hidden sm:block" />
 

@@ -3,14 +3,17 @@ import type { PreviewAdapterProps } from "./types";
 import { parseCsv, tableToCsv } from "../services/csvParser";
 import { DataTable } from "../components/DataTable";
 import { DataTableHeaderActions } from "../components/DataTableHeaderActions";
-import { CsvDecorationPanel } from "../components/CsvDecorationPanel";
+import { CsvDecorationModal } from "../components/CsvDecorationModal";
 import {
   parseDecorationFromCsv,
   stripDecorationFromCsv,
   serializeDecorationToCsv,
 } from "../services/csvDecorationStorage";
 import { buildDecorationMap } from "../services/csvDecorationEngine";
-import type { CsvDecorationRule } from "../types/csvDecoration.types";
+import type {
+  CsvDecorationRule,
+  CsvMergeConfig,
+} from "../types/csvDecoration.types";
 import { useEditorStore } from "../../tabs/store";
 import { Table as TableIcon, Palette } from "lucide-react";
 
@@ -28,6 +31,10 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   const decorationConfig = useMemo(() => {
     return parseDecorationFromCsv(rawContent);
   }, [rawContent]);
+
+  const mergeConfig: CsvMergeConfig = useMemo(() => {
+    return decorationConfig.merge ?? { mode: "none" };
+  }, [decorationConfig.merge]);
 
   // Clean CSV content without decoration tag for tabular data parsing
   const cleanContent = useMemo(() => {
@@ -60,7 +67,7 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     }
   }, [parsed.delimiter]);
 
-  // Helper to persist updated CSV rows while keeping decoration rules intact
+  // Helper to persist updated CSV rows while keeping decoration rules and merge intact
   const commitCsvData = useCallback(
     (columns: string[], rows: Record<string, string>[]) => {
       const newCsv = tableToCsv(columns, rows, parsed.delimiter);
@@ -75,10 +82,23 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     (newRules: CsvDecorationRule[]) => {
       const withDecoration = serializeDecorationToCsv(cleanContent, {
         rules: newRules,
+        merge: decorationConfig.merge,
       });
       updateTabContent(tab.id, withDecoration);
     },
-    [cleanContent, tab.id, updateTabContent],
+    [cleanContent, decorationConfig.merge, tab.id, updateTabContent],
+  );
+
+  // Update merge configuration and serialize into CSV content
+  const handleChangeMerge = useCallback(
+    (newMerge: CsvMergeConfig) => {
+      const withDecoration = serializeDecorationToCsv(cleanContent, {
+        rules: decorationConfig.rules,
+        merge: newMerge,
+      });
+      updateTabContent(tab.id, withDecoration);
+    },
+    [cleanContent, decorationConfig.rules, tab.id, updateTabContent],
   );
 
   // 2-Way Data-Binding Handlers
@@ -169,24 +189,30 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
         delimiter={parsed.delimiter}
         rightSlot={
           <div className="flex items-center gap-1.5">
-            {/* Decoration Toggle Button */}
+            {/* Decoration Modal Button */}
             <button
               type="button"
-              onClick={() => setIsDecorationOpen((prev) => !prev)}
+              onClick={() => setIsDecorationOpen(true)}
               className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
                 isDecorationOpen
                   ? "bg-[var(--accent)]/15 border border-[var(--accent)] text-[var(--accent)] font-medium"
-                  : decorationConfig.rules.length > 0
+                  : decorationConfig.rules.length > 0 ||
+                      mergeConfig.mode !== "none"
                     ? "text-[var(--accent)] hover:bg-[var(--accent)]/20"
                     : "text-[var(--text-muted)] hover:text-[var(--text-highlight)] hover:bg-[var(--bg-surface-elevated)]"
               }`}
-              title="Manage CSV Visual Highlights & Rules"
+              title="Manage CSV Visual Highlights & Automated Row Merging"
             >
               <Palette className="w-3 h-3" />
               <span className="text-[10px] hidden md:inline">Decoration</span>
-              {decorationConfig.rules.length > 0 && (
-                <span className="px-1 rounded-full text-[9px] font-mono bg-[var(--accent)] text-[var(--bg-app)] font-bold">
-                  {decorationConfig.rules.length}
+              {(decorationConfig.rules.length > 0 ||
+                mergeConfig.mode !== "none") && (
+                <span className="flex items-center gap-0.5 px-1 rounded-full text-[9px] font-mono bg-[var(--accent)] text-[var(--bg-app)] font-bold">
+                  {decorationConfig.rules.length > 0 &&
+                    decorationConfig.rules.length}
+                  {mergeConfig.mode !== "none" && (
+                    <span className="text-[8px] font-sans">M</span>
+                  )}
                 </span>
               )}
             </button>
@@ -210,6 +236,7 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
     tab.name,
     isDecorationOpen,
     decorationConfig.rules.length,
+    mergeConfig.mode,
   ]);
 
   if (!cleanContent.trim() || parsed.columns.length === 0) {
@@ -229,15 +256,16 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
-      {/* Visual Decoration Drawer */}
-      {isDecorationOpen && (
-        <CsvDecorationPanel
-          rules={decorationConfig.rules}
-          onChangeRules={handleChangeRules}
-          onClose={() => setIsDecorationOpen(false)}
-          columns={parsed.columns}
-        />
-      )}
+      {/* Visual Decoration & Layout Modal */}
+      <CsvDecorationModal
+        isOpen={isDecorationOpen}
+        onClose={() => setIsDecorationOpen(false)}
+        rules={decorationConfig.rules}
+        onChangeRules={handleChangeRules}
+        mergeConfig={mergeConfig}
+        onChangeMerge={handleChangeMerge}
+        columns={parsed.columns}
+      />
 
       {/* Main Data Table */}
       <div className="flex-1 w-full overflow-hidden">
@@ -253,6 +281,7 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
           onMoveColumn={handleMoveColumn}
           isReadOnly={Boolean(tab.isLocked)}
           decorationMap={decorationMap}
+          mergeConfig={mergeConfig}
         />
       </div>
     </div>

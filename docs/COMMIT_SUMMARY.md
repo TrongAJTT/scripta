@@ -1,85 +1,72 @@
 # Commit Summary
 
 > [!IMPORTANT]
-> This document records the commit message and detailed change log for the **current staged commit**.
+> This document records the commit message and detailed change log for the **current staged and upcoming commit**.
 > Prior to creating any new commit, the contents below MUST be **COMPLETELY REWRITTEN** to reflect only the changes belonging to that specific commit, rather than appending new entries.
 
 ## 📌 Commit Message
 
 ```text
-feat(preview): add CSV visual decoration rules and performance limits table
+feat(preview): add CSV decoration modal with auto-merge rows and card picker
 
-- Implement a rule-based decoration system for CSV preview that lets users highlight rows, cells, or row-index cells based on text/regex pattern matching.
-- Decoration rules are persisted inline within the CSV file as a comment block (# <scripta.csv.decoration>...</scripta.csv.decoration>) and stripped before data parsing, copy, and export.
-- Add ColorPickerPopover shared component using react-colorful with HexAlpha support, solid presets, and a clear action.
-- Refactor Settings > Preview performance limits into a collapsible DataTable (default collapsed), noting CSV is excluded since it uses paging.
-- Add react-colorful to the About dialog's open-source libraries list.
+- Refactor CSV Visual Decoration from an inline sub-panel into a tabbed modal dialog (Highlight Rules and Auto-Merge Rows) with comfortable internal padding.
+- Add Auto-Merge Rows capability supporting "Merge if Empty" (consecutive blank cells below) and "Merge by ID Reference Column" (consecutive rows sharing the same identifier).
+- Implement read-only Merged View toggle in DataTable footer, computing rowSpan matrices while preserving full physical row-index numbering and topmost decoration anchors.
+- Convert Select Merge Mode into a unified CardPicker component supporting single-column vertical layout with clear descriptions and iconography.
+- Persist merge configuration alongside decoration rules inside the inline CSV comment block (# <scripta.csv.decoration>{ rules, merge }</scripta.csv.decoration>).
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. CSV Decoration Types & Storage (`src/features/preview/types/`, `src/features/preview/services/`)
+### 1. CSV Decoration & Merge Types (`src/features/preview/types/`)
 
-- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts) (**NEW**):
-  - Defines `CsvDecorationRule` with: `scope` (`"all"` | `"column"`), `scopeColumn`, `pattern`, `isRegex`, `target` (`"cell"` | `"row"` | `"index"`), `style` (background, color, bold, italic, underline), `label`, and `enabled`.
-  - Defines `CsvDecorationConfig` and `DecorationMap` for fast O(1) lookup during table rendering.
+- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts):
+  - Added `CsvMergeMode = "none" | "empty" | "id"`.
+  - Added `CsvMergeConfig` interface (`mode`, optional `idColumn`).
+  - Added `CellSpanInfo` (`rowSpan`: $\ge 1$ for visible anchor cells, $0$ for collapsed/hidden cells) and `MergeSpanMap` dictionary type.
+  - Extended `CsvDecorationConfig` to include optional `merge?: CsvMergeConfig`.
 
-- [csvDecorationStorage.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationStorage.ts) (**NEW**):
-  - `parseDecorationFromCsv`: extracts and parses the `# <scripta.csv.decoration>{...}</scripta.csv.decoration>` comment block embedded at the end of CSV content.
-  - `stripDecorationFromCsv`: removes the decoration block before data parsing, copying, or exporting — ensuring clean output.
-  - `serializeDecorationToCsv`: appends or replaces the decoration block at the end of CSV content when rules are saved.
+### 2. Serialization & Engine Updates (`src/features/preview/services/`)
 
-- [csvDecorationEngine.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationEngine.ts) (**NEW**):
-  - `buildDecorationMap`: evaluates all active rules in order (first-match-wins priority), scanning either all columns or a specific column per rule, and produces a `DecorationMap` with `rows`, `cells`, and `indexCells` Maps.
+- [csvDecorationStorage.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationStorage.ts):
+  - Updated `parseDecorationFromCsv` to extract and validate `merge` settings with fallback to `{ mode: "none" }`.
+  - Updated `serializeDecorationToCsv` to include the `merge` payload whenever active, stripping the block if both rules and merge are empty/none.
 
-### 2. Decoration Panel UI & Color Picker (`src/features/preview/components/`, `src/shared/components/`)
+- [csvDecorationEngine.ts](file:///g:/TextEditor/src/features/preview/services/csvDecorationEngine.ts):
+  - Added `computeMergeSpanMap(rows, columns, mergeConfig)` pure function:
+    - `"empty"` mode: Scans each column top-to-bottom, accumulating `rowSpan` on the non-empty anchor cell and zeroing subsequent empty cells.
+    - `"id"` mode: Groups contiguous row records sharing the same `idColumn` value into a consolidated block for the reference column. For all other columns, only downward blank/empty cells are merged into their preceding non-empty anchor, preserving populated cells across grouped rows.
 
-- [CsvDecorationPanel.tsx](file:///g:/TextEditor/src/features/preview/components/CsvDecorationPanel.tsx) (**NEW**):
-  - Inline collapsible drawer rendered below the PreviewPanel header.
-  - Unified form for both **adding** and **editing** rules (toggled by the pencil icon on each row).
-  - Scan scope selector: "All Columns" or "Specific Column" (dropdown of actual CSV columns).
-  - Apply target selector: "Entire Row", "Matching Cell(s)", or "Row Number Cell (#)".
-  - Style controls: two `ColorPickerPopover` swatches (background and text color) plus B/I/U toggles.
-  - HTML5 native drag-and-drop for reordering rule priority.
-  - Delete action invokes `dialog.confirm` via Global Dialog Host before removal.
-  - Active edit rule is highlighted with a left accent border.
+### 3. Modal Architecture & CardPicker UI (`src/features/preview/components/`, `src/shared/components/`)
 
-- [ColorPickerPopover.tsx](file:///g:/TextEditor/src/shared/components/ColorPickerPopover.tsx) (**NEW**):
-  - Wraps `react-colorful`'s `HexAlphaColorPicker` with a swatch trigger button.
-  - HEX + alpha manual input field (`#RRGGBBAA`), clear action, and 16 solid preset colors (full Tailwind spectrum).
-  - Uses render-time state derivation (no `useEffect` for value sync) to avoid linter warnings.
+- [CsvDecorationModal.tsx](file:///g:/TextEditor/src/features/preview/components/CsvDecorationModal.tsx) (**NEW**):
+  - Replaces inline drawer panel with a clean `ModalWrapper` dialog (`max-w-3xl`) featuring standard `p-5` body padding.
+  - **Tab 1 ("Highlight Rules")**: Full rule management interface (Add/Edit form, regex toggle, column scoping, target selector, ColorPickerPopover, B/I/U toggles, drag-and-drop reordering, and global dialog deletion confirm).
+  - **Tab 2 ("Auto-Merge Rows")**: Configures table consolidation using `CardPicker`:
+    - **Disabled (Default)**: Normal flat table layout with full inline editing.
+    - **Merge if Empty**: Automatic downward blank cell consolidation.
+    - **Merge by ID Reference Column**: Grouping rows by an identifier column (with other columns merged only when empty) and an interactive column dropdown selector.
 
-### 3. DataTable Integration (`src/features/preview/components/`)
+- [CardPicker.tsx](file:///g:/TextEditor/src/shared/components/CardPicker.tsx):
+  - Added support for `columns={1}` (vertical card stack) in addition to 2, 3, and 4 column grid modes.
+
+### 4. DataTable Integration & Merged View (`src/features/preview/components/`)
 
 - [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
-  - Added optional `decorationMap?: DecorationMap` prop.
-  - Row `<tr>` receives `backgroundColor` from `decorationMap.rows` if set.
-  - Index `<td>` receives background, color, bold, italic, underline from `decorationMap.indexCells`.
-  - Data cells resolve style from `decorationMap.cells` first, then fall back to the row-level style if target is `"row"`.
+  - Accepts `mergeConfig?: CsvMergeConfig` prop.
+  - Added `isMergedView` local toggle and `effectiveReadOnly = isReadOnly || effectiveMergedView`.
+  - Computes `mergeSpanMap` dynamically for the current visible `paginatedRows`.
+  - In `<tbody>`: renders `<td rowSpan={span.rowSpan}>` for anchor cells and omits rendering `<td>` when `span.rowSpan === 0`.
+  - Automatically vertically centers content (`align-middle` / `verticalAlign: "middle"`) for any cells spanning multiple rows (`rowSpan > 1`).
+  - Preserves exact physical row index numbers (`#` column) for auditing and navigation.
+  - Naturally applies decoration rules from the topmost anchor row to cover the full merged block.
+  - Added **"Render Merged" / "Merged View: ON"** toggle button at the footer summary bar (adjacent to total row/column counts).
 
-### 4. CSV Adapter Wiring (`src/features/preview/adapters/`)
+### 5. CSV Preview Adapter Wiring (`src/features/preview/adapters/`)
 
 - [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
-  - Strips decoration block before passing content to `parseCsv` and `DataTableHeaderActions` (copy/export are unaffected by metadata).
-  - Memoizes `decorationConfig`, `cleanContent`, and `decorationMap` independently to minimize re-renders.
-  - `commitCsvData` helper re-serializes decoration rules back into tab content after every data mutation.
-  - Injects a **"Decoration"** button in the `rightSlot` of `DataTableHeaderActions`:
-    - Border highlight appears **only when the panel is open** (not merely when rules exist).
-    - Rule count badge uses `text-[var(--bg-app)]` for dark-mode-safe contrast on the accent background.
-  - Passes `columns` (not `totalRows`) to `CsvDecorationPanel` for scope column selection.
-
-### 5. Settings & About (`src/features/settings/components/`)
-
-- [PreviewTab.tsx](file:///g:/TextEditor/src/features/settings/components/preferences/PreviewTab.tsx):
-  - Refactored the "Split View Performance & Limits" section into a collapsible group (default collapsed) using the existing `DataTable` component.
-  - Displays Format, Max Lines, and Max File Size per hardware preset.
-  - Adds a note explaining CSV is excluded from limits because it already uses automatic paging.
-
-- [AboutModal.tsx](file:///g:/TextEditor/src/features/settings/components/AboutModal.tsx):
-  - Added `"react-colorful"` to the open-source libraries list.
-
-### 6. Dependencies (`package.json`, `pnpm-lock.yaml`)
-
-- Added `react-colorful ^5.8.1` as a runtime dependency.
+  - Replaced `CsvDecorationPanel` with `CsvDecorationModal`.
+  - Added `handleChangeMerge` handler and integrated `mergeConfig` into `commitCsvData` and `handleChangeRules`.
+  - Updated header **Decoration** button badge to display rule count plus a `M` indicator when auto-merge is active.
