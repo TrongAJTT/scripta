@@ -164,6 +164,7 @@ pnpm preview
 For in-depth architectural guides and developer notes:
 
 - 🏛️ [System Architecture](docs/ARCHITECTURE.md) - Internal design, state flow, and CodeMirror extension compartments.
+- ⚡ [Performance & UX Standards](docs/PERFORMANCE_UX_GUIDE.md) - Code-splitting, lazy loading, preview thresholds, and PWA caching rules.
 - 💡 [Features & User Guide](docs/FEATURES_USER_GUIDE.md) - Deep dive into all editor capabilities and shortcuts.
 - 🛠️ [Development & Extension Guide](docs/DEVELOPMENT_GUIDE.md) - Guide on adding new preview adapters and language support.
 - ☁️ [Deployment Guide](docs/DEPLOYMENT_CLOUDFLARE.md) - Production deployment setup on Cloudflare Pages / Vercel.

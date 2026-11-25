@@ -15,6 +15,9 @@ pnpm install
 # Start local development server (Vite)
 pnpm dev
 
+# Run unit tests (Vitest)
+pnpm test
+
 # Run Oxlint for code quality and convention checks
 pnpm lint
 
@@ -33,12 +36,14 @@ pnpm preview
 1. Install the respective language package (e.g., `@codemirror/lang-rust`, `@codemirror/lang-go`).
 2. Add the language identifier to `SupportedLanguage` in `src/core/types/file.types.ts`.
 3. Add the file extension mapping in `src/core/utils/fileDetection.ts`.
-4. Configure `getLanguageExtension` in `src/features/editor/components/CodeEditor.tsx`.
+4. Configure `loadLanguageExtension` (using dynamic `import()`) in `src/features/editor/components/CodeEditor.tsx`.
 5. Add an entry in the Menu Bar dropdown at `src/app/layout/MenuBar.tsx`.
 
 ### Adding a New Preview Viewer:
 1. Define the viewer type under `previewType` (`'markdown' | 'mermaid' | 'svg' | 'image' | 'custom'`).
-2. Implement the parsing or rendering branch inside `src/features/preview/components/PreviewPanel.tsx`.
+2. Create the adapter component under `src/features/preview/adapters/` and register it with `React.lazy(...)` in `src/features/preview/adapters/registry.ts`.
+
+See [Performance & UX Optimization Standards](PERFORMANCE_UX_GUIDE.md) for code-splitting and caching rules.
 
 ---
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { EditorState, Compartment } from "@codemirror/state";
+import { EditorState, Compartment, type Extension } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -22,14 +22,6 @@ import {
   defaultHighlightStyle,
 } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { javascript } from "@codemirror/lang-javascript";
-import { markdown } from "@codemirror/lang-markdown";
-import { html } from "@codemirror/lang-html";
-import { css } from "@codemirror/lang-css";
-import { json } from "@codemirror/lang-json";
-import { python } from "@codemirror/lang-python";
-import { StreamLanguage } from "@codemirror/language";
-import { stex } from "@codemirror/legacy-modes/mode/stex";
 
 import type { SupportedLanguage } from "../../../core/types/file.types";
 import { useEditorStore } from "../../tabs/store";
@@ -59,6 +51,71 @@ const wrappingCompartment = new Compartment();
 const lineNumbersCompartment = new Compartment();
 const whitespaceCompartment = new Compartment();
 const editableCompartment = new Compartment();
+
+const languageExtensionCache = new Map<SupportedLanguage, Extension>();
+
+async function loadLanguageExtension(
+  lang: SupportedLanguage,
+): Promise<Extension> {
+  const cached = languageExtensionCache.get(lang);
+  if (cached) return cached;
+
+  let ext: Extension = [];
+  switch (lang) {
+    case "javascript": {
+      const { javascript } = await import("@codemirror/lang-javascript");
+      ext = javascript({ jsx: true, typescript: false });
+      break;
+    }
+    case "typescript": {
+      const { javascript } = await import("@codemirror/lang-javascript");
+      ext = javascript({ jsx: true, typescript: true });
+      break;
+    }
+    case "markdown": {
+      const { markdown } = await import("@codemirror/lang-markdown");
+      ext = markdown();
+      break;
+    }
+    case "html":
+    case "svg":
+    case "xml": {
+      const { html } = await import("@codemirror/lang-html");
+      ext = html();
+      break;
+    }
+    case "css": {
+      const { css } = await import("@codemirror/lang-css");
+      ext = css();
+      break;
+    }
+    case "json": {
+      const { json } = await import("@codemirror/lang-json");
+      ext = json();
+      break;
+    }
+    case "python": {
+      const { python } = await import("@codemirror/lang-python");
+      ext = python();
+      break;
+    }
+    case "latex": {
+      const [{ StreamLanguage }, { stex }] = await Promise.all([
+        import("@codemirror/language"),
+        import("@codemirror/legacy-modes/mode/stex"),
+      ]);
+      ext = StreamLanguage.define(stex);
+      break;
+    }
+    case "csv":
+    default:
+      ext = [];
+      break;
+  }
+
+  languageExtensionCache.set(lang, ext);
+  return ext;
+}
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
   tabId,
@@ -104,34 +161,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const lineWrapping = useEditorStore((s) => s.settings.lineWrapping);
   const showLineNumbers = useEditorStore((s) => s.settings.showLineNumbers);
   const showWhitespace = useEditorStore((s) => s.settings.showWhitespace);
-
-  // Helper to get language extension
-  const getLanguageExtension = (lang: SupportedLanguage) => {
-    switch (lang) {
-      case "javascript":
-        return javascript({ jsx: true, typescript: false });
-      case "typescript":
-        return javascript({ jsx: true, typescript: true });
-      case "markdown":
-        return markdown();
-      case "html":
-      case "svg":
-      case "xml":
-        return html();
-      case "css":
-        return css();
-      case "json":
-        return json();
-      case "csv":
-        return []; // Standard tabular text mode
-      case "python":
-        return python();
-      case "latex":
-        return StreamLanguage.define(stex);
-      default:
-        return [];
-    }
-  };
 
   const isDarkMode =
     themeMode === "dark" ||
@@ -263,7 +292,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         customShortcuts,
         keymap.of([...defaultKeymap, ...historyKeymap]),
-        languageCompartment.of(getLanguageExtension(language)),
+        languageCompartment.of(languageExtensionCache.get(language) ?? []),
         themeCompartment.of(isDarkMode ? oneDark : []),
         fontSizeCompartment.of(baseTheme),
         wrappingCompartment.of(lineWrapping ? EditorView.lineWrapping : []),
@@ -346,13 +375,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // Update language dynamically without recreating state
   useEffect(() => {
-    if (viewRef.current) {
-      viewRef.current.dispatch({
-        effects: languageCompartment.reconfigure(
-          getLanguageExtension(language),
-        ),
-      });
-    }
+    let isCancelled = false;
+    void loadLanguageExtension(language).then((ext) => {
+      if (!isCancelled && viewRef.current) {
+        viewRef.current.dispatch({
+          effects: languageCompartment.reconfigure(ext),
+        });
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
   }, [language]);
 
   // Update theme dynamically

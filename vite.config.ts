@@ -40,9 +40,10 @@ export default defineConfig({
             return "react-vendor";
           }
           if (
-            id.includes("node_modules/@codemirror/") ||
-            id.includes("node_modules/codemirror/") ||
-            id.includes("node_modules/@lezer/")
+            (id.includes("node_modules/@codemirror/") &&
+              !id.includes("node_modules/@codemirror/lang-") &&
+              !id.includes("node_modules/@codemirror/legacy-modes")) ||
+            id.includes("node_modules/codemirror/")
           ) {
             return "codemirror-vendor";
           }
@@ -86,6 +87,22 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/pyodide\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pyodide-cdn-cache",
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
     }),
   ],
