@@ -36,12 +36,15 @@ Welcome to the **Scripta** project. These rules and conventions are **mandatory*
 
 ## 3. 🎨 Design System & Theme Consistency
 
-- Do not hardcode ad-hoc hex colors into inline styles.
+- Follow the **Scripta Workbench Design Language** documented in `docs/DESIGN_SYSTEM.md` (Fluent 2 density & surface layering + Material 3 tonal semantics).
+- Do not hardcode ad-hoc hex colors or dark-only Tailwind alert backgrounds (e.g., `bg-red-950/40`, `text-red-300`).
 - Always use the semantic CSS theme tokens defined in `src/index.css`:
-  - Backgrounds: `var(--bg-app)`, `var(--bg-surface)`, `var(--bg-editor)`, `var(--bg-toolbar)`, `var(--bg-statusbar)`
+  - Backgrounds: `var(--bg-app)`, `var(--bg-surface)`, `var(--bg-editor)`, `var(--bg-toolbar)`, `var(--bg-statusbar)`, `var(--bg-preview)`
   - Accents: `var(--accent)` (signature emerald green), `var(--accent-blue)`, `var(--accent-purple)`
+  - Statuses: `var(--status-{info,success,warning,danger}-{bg,border,text})`
   - Text: `var(--text-main)`, `var(--text-muted)`, `var(--text-highlight)`
   - Borders: `var(--border-color)`, `var(--border-subtle)`
+- Use shared state primitives (`EmptyState`, `InlineBanner`, `PreviewZoomControls`) instead of hand-rolling centered error cards or duplicate toolbars.
 - Verify visual harmony in both **Dark** and **Light** modes.
 
 ---

@@ -11,6 +11,7 @@ import {
   Braces,
   Table as TableIcon,
 } from "lucide-react";
+import { EmptyState } from "../../../shared/components/EmptyState";
 
 import {
   JSON_THEMES,
@@ -593,31 +594,23 @@ export const JsonAdapter: React.FC<PreviewAdapterProps> = ({
 
   if (!rawContent.trim()) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] select-none">
-        <Braces className="w-12 h-12 stroke-[1.2] text-[var(--text-subtle)] mb-3" />
-        <p className="text-xs font-medium text-[var(--text-main)]">
-          Empty JSON Document
-        </p>
-        <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-xs">
-          Enter valid JSON in the editor to explore the interactive tree view.
-        </p>
-      </div>
+      <EmptyState
+        icon={<Braces className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty JSON Document"
+        description="Enter valid JSON in the editor to explore the interactive tree view."
+      />
     );
   }
 
   if (error) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center select-none">
-        <div className="w-12 h-12 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-[var(--accent-red)] mb-4">
-          <AlertCircle className="w-6 h-6" />
-        </div>
-        <h3 className="text-sm font-semibold text-[var(--text-highlight)] mb-1">
-          Invalid JSON Syntax
-        </h3>
-        <p className="text-xs text-red-400 font-mono bg-red-950/40 border border-red-800/60 px-3 py-2 rounded-lg max-w-md break-all">
-          {error}
-        </p>
-      </div>
+      <EmptyState
+        tone="danger"
+        icon={<AlertCircle className="w-10 h-10 stroke-[1.25]" />}
+        title="Invalid JSON Syntax"
+        description="Fix the JSON formatting error in the editor to inspect the tree or table view."
+        detail={error}
+      />
     );
   }
 

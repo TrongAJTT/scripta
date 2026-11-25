@@ -19,6 +19,7 @@ import {
 import type { ScriptMetadata } from "./features/scripts/types/script.types";
 import { FileCode2 } from "lucide-react";
 import { GlobalDialogHost } from "./shared/dialog/GlobalDialogHost";
+import { EmptyState } from "./shared/components/EmptyState";
 import { useEditorCommands } from "./features/editor/hooks/useEditorCommands";
 import { useGlobalShortcuts } from "./features/editor/hooks/useGlobalShortcuts";
 import { useFileDrop } from "./features/editor/hooks/useFileDrop";
@@ -336,16 +337,20 @@ export const App: React.FC = () => {
               onRatioChange={setPreviewRatio}
             />
           ) : (
-            <div className="h-full w-full flex flex-col items-center justify-center text-[var(--text-muted)] gap-3">
-              <FileCode2 className="w-12 h-12 stroke-1 text-[var(--text-subtle)]" />
-              <p className="text-sm">No files open</p>
-              <button
-                onClick={() => createTab()}
-                className="px-4 py-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] transition-colors"
-              >
-                Create New File (Alt+N)
-              </button>
-            </div>
+            <EmptyState
+              icon={<FileCode2 className="w-10 h-10 stroke-[1.25]" />}
+              title="No files open"
+              description="Create a new document or open a file from disk to start editing."
+              actions={
+                <button
+                  type="button"
+                  onClick={() => createTab()}
+                  className="px-3.5 py-1.5 bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] rounded text-xs text-[var(--text-main)] hover:text-[var(--text-highlight)] transition-colors cursor-pointer"
+                >
+                  Create New File (Alt+N)
+                </button>
+              }
+            />
           )}
 
           <Suspense fallback={null}>

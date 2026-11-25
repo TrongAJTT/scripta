@@ -1,55 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import type { PreviewAdapterProps } from './types';
-import DOMPurify from 'dompurify';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import type { PreviewAdapterProps } from "./types";
+import DOMPurify from "dompurify";
+import { Code } from "lucide-react";
+import { PreviewZoomControls } from "../components/PreviewZoomControls";
+import { EmptyState } from "../../../shared/components/EmptyState";
 
-export const SvgAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderActions }) => {
+export const SvgAdapter: React.FC<PreviewAdapterProps> = ({
+  tab,
+  setHeaderActions,
+}) => {
   const [zoom, setZoom] = useState(1);
 
-  const cleanSvg = DOMPurify.sanitize(tab.content || '', {
+  const rawContent = tab.content || "";
+  const cleanSvg = DOMPurify.sanitize(rawContent, {
     USE_PROFILES: { svg: true, svgFilters: true },
   });
 
   // Inject zoom controls into unified PreviewPanel header
   useEffect(() => {
+    if (!rawContent.trim()) {
+      setHeaderActions?.(null);
+      return;
+    }
+
     setHeaderActions?.(
-      <div className="flex items-center gap-1 select-none">
-        <button
-          onClick={() => setZoom((z) => Math.max(0.2, Number((z - 0.2).toFixed(1))))}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)]"
-          title="Zoom out"
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-        <span className="px-1 font-mono text-[10px] text-[var(--text-main)] min-w-[34px] text-center">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          onClick={() => setZoom((z) => Math.min(5, Number((z + 0.2).toFixed(1))))}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)]"
-          title="Zoom in"
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => setZoom(1)}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)] border-l border-[var(--border-color)] ml-0.5 pl-1.5"
-          title="Reset Zoom"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      <PreviewZoomControls
+        zoom={zoom}
+        onZoomChange={setZoom}
+        onReset={() => setZoom(1)}
+      />,
     );
 
     return () => setHeaderActions?.(null);
-  }, [setHeaderActions, zoom]);
+  }, [setHeaderActions, zoom, rawContent]);
+
+  if (!rawContent.trim()) {
+    return (
+      <EmptyState
+        icon={<Code className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty SVG Document"
+        description="Enter valid SVG markup in the editor to preview vector graphics."
+      />
+    );
+  }
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden relative">
-      <div className="flex-1 w-full h-full overflow-auto flex items-center justify-center p-8">
+    <div className="h-full w-full flex flex-col overflow-hidden relative bg-[var(--bg-preview)]">
+      <div className="flex-1 w-full h-full overflow-auto flex items-center justify-center p-8 bg-canvas-dots">
         <div
-          className="transition-transform duration-100 p-8 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-lg flex items-center justify-center"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+          className="transition-transform duration-100 flex items-center justify-center"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: "center center",
+          }}
           dangerouslySetInnerHTML={{ __html: cleanSvg }}
         />
       </div>

@@ -19,6 +19,7 @@ import { useEditorStore } from "../../tabs/store";
 import { usePreviewSessionStore } from "../store/previewSessionStore";
 import { Table as TableIcon, Palette } from "lucide-react";
 import { useState } from "react";
+import { EmptyState } from "../../../shared/components/EmptyState";
 
 export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
   tab,
@@ -243,16 +244,11 @@ export const CsvAdapter: React.FC<PreviewAdapterProps> = ({
 
   if (!cleanContent.trim() || parsed.columns.length === 0) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] select-none">
-        <TableIcon className="w-12 h-12 stroke-[1.2] text-[var(--text-subtle)] mb-3" />
-        <p className="text-xs font-medium text-[var(--text-main)]">
-          Empty CSV / TSV Document
-        </p>
-        <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-xs">
-          Enter tabular data or paste CSV records in the editor to see the live
-          table preview.
-        </p>
-      </div>
+      <EmptyState
+        icon={<TableIcon className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty CSV / TSV Document"
+        description="Enter tabular data or paste CSV records in the editor to see the live table preview."
+      />
     );
   }
 

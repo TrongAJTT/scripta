@@ -2,11 +2,13 @@ import React, { useEffect, useState, useRef } from "react";
 import type { PreviewAdapterProps } from "./types";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { AlertCircle } from "lucide-react";
+import { FileText } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "../../tabs/store";
 import { applyMermaidTheme } from "../services/mermaidExportService";
 import { MermaidExportMenu } from "../components/MermaidExportMenu";
+import { EmptyState } from "../../../shared/components/EmptyState";
+import { InlineBanner } from "../../../shared/components/InlineBanner";
 
 export const MarkdownAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
   const [renderedHtml, setRenderedHtml] = useState<string>("");
@@ -98,13 +100,26 @@ export const MarkdownAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
     };
   }, [renderedHtml, mermaidTheme, appTheme, tab.name]);
 
+  if (!(tab.content || "").trim()) {
+    return (
+      <EmptyState
+        icon={<FileText className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty Markdown Document"
+        description="Start writing Markdown, tables, or fenced Mermaid blocks to see the formatted preview."
+      />
+    );
+  }
+
   return (
     <div className="h-full w-full overflow-auto p-6 relative">
       {hasRenderError && (
-        <div className="mb-4 p-3 rounded-md bg-red-950/40 border border-red-800/60 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-          <span>{hasRenderError}</span>
-        </div>
+        <InlineBanner
+          variant="error"
+          compact
+          dismissible={false}
+          message={hasRenderError}
+          className="mb-4"
+        />
       )}
       <div
         ref={containerRef}

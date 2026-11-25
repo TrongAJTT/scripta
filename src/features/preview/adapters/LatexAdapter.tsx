@@ -1,7 +1,9 @@
 import React, { useMemo, useRef } from "react";
 import type { PreviewAdapterProps } from "./types";
 import { compileLatexToHtml } from "../services/latexCompilerService";
-import { AlertCircle, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
+import { EmptyState } from "../../../shared/components/EmptyState";
+import { InlineBanner } from "../../../shared/components/InlineBanner";
 
 export const LatexAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -13,15 +15,11 @@ export const LatexAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
 
   if (!rawContent.trim()) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] select-none">
-        <FileText className="w-12 h-12 stroke-[1.2] text-[var(--text-subtle)] mb-3" />
-        <p className="text-xs font-medium text-[var(--text-main)]">
-          Empty LaTeX Document
-        </p>
-        <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-xs">
-          Start typing LaTeX code with sections, text, equations ($...$), or tables to see the live document preview.
-        </p>
-      </div>
+      <EmptyState
+        icon={<FileText className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty LaTeX Document"
+        description="Start typing LaTeX code with sections, text, equations ($...$), or tables to see the live document preview."
+      />
     );
   }
 
@@ -55,10 +53,13 @@ export const LatexAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
 
         {/* Error notification if any */}
         {renderResult.hasErrors && renderResult.errors.length > 0 && (
-          <div className="mb-4 p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-red-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>{renderResult.errors[0]}</span>
-          </div>
+          <InlineBanner
+            variant="error"
+            compact
+            dismissible={false}
+            message={renderResult.errors[0]}
+            className="mb-4"
+          />
         )}
 
         {/* LaTeX Compiled Content */}
