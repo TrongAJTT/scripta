@@ -15,6 +15,7 @@ import {
 import { useKeybindingStore } from "../../../core/commands/keybindingStore";
 import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 import { InlineBanner } from "../../../shared/components/InlineBanner";
+import { dialog } from "../../../shared/dialog/dialogStore";
 
 interface ShortcutMapperModalProps {
   isOpen: boolean;
@@ -164,8 +165,24 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
       footer={
         <>
           <button
-            onClick={resetAll}
-            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-rose-400 transition-colors"
+            type="button"
+            onClick={() => {
+              void (async () => {
+                const confirmed = await dialog.confirm({
+                  title: "Reset All Shortcuts",
+                  message:
+                    "Are you sure you want to restore all keyboard shortcuts to their default bindings?",
+                  confirmText: "Reset All",
+                  cancelText: "Cancel",
+                  variant: "warning",
+                  defaultFocus: "cancel",
+                });
+                if (confirmed) {
+                  resetAll();
+                }
+              })();
+            }}
+            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset All to Defaults</span>

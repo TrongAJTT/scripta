@@ -1,14 +1,34 @@
 import React, { useState } from "react";
-import { Sliders, Layout, Type, RotateCcw, Settings, Eye } from "lucide-react";
+import {
+  Sliders,
+  Layout,
+  Type,
+  RotateCcw,
+  Settings,
+  Eye,
+  HardDrive,
+} from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { ModalWrapper } from "../../../shared/components/ModalWrapper";
+import { dialog } from "../../../shared/dialog/dialogStore";
 import {
   ContinuousSectionModalLayout,
   type ContinuousSectionItem,
 } from "../../../shared/components/ContinuousSectionModalLayout";
-import { GeneralTab, LayoutTab, PreviewTab, EditorTab } from "./preferences";
+import {
+  GeneralTab,
+  LayoutTab,
+  PreviewTab,
+  EditorTab,
+  ResourcesTab,
+} from "./preferences";
 
-export type SettingsCategory = "general" | "layout" | "preview" | "editor";
+export type SettingsCategory =
+  | "general"
+  | "layout"
+  | "preview"
+  | "editor"
+  | "resources";
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -36,7 +56,18 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
     setActiveCategory(initialCategory || "general");
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    const confirmed = await dialog.confirm({
+      title: "Reset Settings to Defaults",
+      message:
+        "Are you sure you want to restore all preferences (theme, layout, preview, and editor settings) back to their default values?",
+      confirmText: "Reset to Defaults",
+      cancelText: "Cancel",
+      variant: "warning",
+      defaultFocus: "cancel",
+    });
+    if (!confirmed) return;
+
     updateSettings({
       theme: "dark",
       fontSize: 14,
@@ -86,6 +117,13 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
       icon: <Type className="w-4 h-4" />,
       content: <EditorTab />,
     },
+    {
+      id: "resources",
+      label: "Resources & Storage",
+      desc: "Inspect and manage cached optional runtimes (Python, Mermaid, LaTeX)",
+      icon: <HardDrive className="w-4 h-4" />,
+      content: <ResourcesTab />,
+    },
   ];
 
   return (
@@ -100,8 +138,8 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
         <>
           <button
             type="button"
-            onClick={handleReset}
-            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-amber-400 transition-colors cursor-pointer"
+            onClick={() => void handleReset()}
+            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--status-warning-text)] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset Settings to Defaults</span>
