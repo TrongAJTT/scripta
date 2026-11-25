@@ -35,14 +35,30 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset to the first category and reset state whenever modal is opened
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedCategory(firstCategoryName);
-      setSearchQuery("");
-      setDisplayLimit(60);
+  const resetFilterView = React.useCallback(() => {
+    setDisplayLimit(60);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
     }
-  }, [isOpen, firstCategoryName]);
+  }, []);
+
+  const handleClose = React.useCallback(() => {
+    setSelectedCategory(firstCategoryName);
+    setSearchQuery("");
+    setSelectedChar(null);
+    resetFilterView();
+    onClose();
+  }, [firstCategoryName, onClose, resetFilterView]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    resetFilterView();
+  };
+
+  const handleCategoryChange = (catId: string) => {
+    setSelectedCategory(catId);
+    resetFilterView();
+  };
 
   // Convert categories list to SearchableFilterItem format for the reusable dropdown
   const categoryFilterItems: SearchableFilterItem[] = useMemo(() => {
@@ -72,18 +88,22 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
     });
   }, [searchQuery, selectedCategory]);
 
-  // Reset display limit and scroll position when filter changes
-  useEffect(() => {
-    setDisplayLimit(60);
-    if (tableContainerRef.current) {
-      tableContainerRef.current.scrollTop = 0;
-    }
-  }, [searchQuery, selectedCategory]);
-
   // Slice characters for rendering (lazy rendering / infinite scrolling)
   const visibleCharacters = useMemo(() => {
     return filteredCharacters.slice(0, displayLimit);
   }, [filteredCharacters, displayLimit]);
+
+  // Derive active selection without triggering an effect
+  const activeSelectedChar = useMemo(() => {
+    if (filteredCharacters.length === 0) return null;
+    if (
+      selectedChar &&
+      filteredCharacters.some((c) => c.unicode === selectedChar.unicode)
+    ) {
+      return selectedChar;
+    }
+    return filteredCharacters[0];
+  }, [filteredCharacters, selectedChar]);
 
   // Handle scroll to load more items when reaching bottom
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -95,20 +115,6 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
     }
   };
 
-  // Automatically keep selectedChar valid when list changes
-  useEffect(() => {
-    if (filteredCharacters.length > 0) {
-      if (
-        !selectedChar ||
-        !filteredCharacters.some((c) => c.unicode === selectedChar.unicode)
-      ) {
-        setSelectedChar(filteredCharacters[0]);
-      }
-    } else {
-      setSelectedChar(null);
-    }
-  }, [filteredCharacters, selectedChar]);
-
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(label);
@@ -118,9 +124,9 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
   const handleSelectAndInsert = React.useCallback(
     (item: SpecialCharacterItem) => {
       onInsert(item.char);
-      onClose();
+      handleClose();
     },
-    [onInsert, onClose],
+    [onInsert, handleClose],
   );
 
   // Keyboard navigation & Enter key handling
@@ -138,10 +144,10 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
       }
 
       if (e.key === "Enter") {
-        if (selectedChar) {
+        if (activeSelectedChar) {
           e.preventDefault();
           e.stopPropagation();
-          handleSelectAndInsert(selectedChar);
+          handleSelectAndInsert(activeSelectedChar);
         }
         return;
       }
@@ -149,7 +155,7 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         const currentIdx = filteredCharacters.findIndex(
-          (c) => c.unicode === selectedChar?.unicode,
+          (c) => c.unicode === activeSelectedChar?.unicode,
         );
         const nextIdx =
           currentIdx < filteredCharacters.length - 1 ? currentIdx + 1 : 0;
@@ -159,7 +165,7 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         const currentIdx = filteredCharacters.findIndex(
-          (c) => c.unicode === selectedChar?.unicode,
+          (c) => c.unicode === activeSelectedChar?.unicode,
         );
         const prevIdx =
           currentIdx > 0 ? currentIdx - 1 : filteredCharacters.length - 1;
@@ -173,17 +179,15 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     isOpen,
-    selectedChar,
+    activeSelectedChar,
     filteredCharacters,
-    onInsert,
-    onClose,
     handleSelectAndInsert,
   ]);
 
   return (
     <ModalWrapper
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Insert Character"
       subtitle="Select and insert invisible, zero-width, bidirectional, variation selectors and special Unicode characters. Press Enter to insert."
       icon={<Sparkles className="w-5 h-5 text-[var(--accent)]" />}
@@ -196,14 +200,14 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
       footer={
         <div className="flex items-center justify-between w-full">
           <div className="text-xs text-[var(--text-muted)] truncate mr-2">
-            {selectedChar ? (
+            {activeSelectedChar ? (
               <span className="font-mono">
                 <strong className="text-[var(--accent)] font-bold">
-                  {selectedChar.unicode}
+                  {activeSelectedChar.unicode}
                 </strong>
-                : {selectedChar.description} ({selectedChar.html})
+                : {activeSelectedChar.description} ({activeSelectedChar.html})
                 <span className="ml-2 text-[10px] text-[var(--text-muted)] font-sans">
-                  [{selectedChar.category}]
+                  [{activeSelectedChar.category}]
                 </span>
               </span>
             ) : (
@@ -212,15 +216,15 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-3.5 py-1.5 rounded-sm border border-[var(--border-color)] text-xs text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] transition-colors cursor-pointer"
             >
               Close
             </button>
             <button
-              disabled={!selectedChar}
+              disabled={!activeSelectedChar}
               onClick={() =>
-                selectedChar && handleSelectAndInsert(selectedChar)
+                activeSelectedChar && handleSelectAndInsert(activeSelectedChar)
               }
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-accent text-accent-contrast text-xs font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
             >
@@ -240,7 +244,7 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
             type="text"
             placeholder="Search by Unicode (U+200B), description, HTML (&#8203;)..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-sm text-[var(--text-main)] focus:outline-hidden focus:border-[var(--accent)] transition-colors"
           />
         </div>
@@ -249,7 +253,7 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
         <SearchableFilterDropdown
           items={categoryFilterItems}
           selectedId={selectedCategory}
-          onSelect={(catId) => setSelectedCategory(catId)}
+          onSelect={handleCategoryChange}
           allOptionLabel="All Categories"
           allCount={SPECIAL_CHARACTERS.length}
           searchPlaceholder="Search category..."
@@ -285,7 +289,8 @@ export const InsertCharacterModal: React.FC<InsertCharacterModalProps> = ({
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">
                 {visibleCharacters.map((item) => {
-                  const isSelected = selectedChar?.unicode === item.unicode;
+                  const isSelected =
+                    activeSelectedChar?.unicode === item.unicode;
                   return (
                     <tr
                       key={item.unicode + item.description}

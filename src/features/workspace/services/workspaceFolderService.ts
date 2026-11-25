@@ -133,7 +133,14 @@ class WorkspaceFolderService {
     handle: FileSystemDirectoryHandle,
   ): Promise<boolean> {
     try {
-      const perm = await (handle as any).requestPermission({ mode: "readwrite" });
+      const handleWithPerm = handle as FileSystemDirectoryHandle & {
+        requestPermission: (options: {
+          mode: "read" | "readwrite";
+        }) => Promise<PermissionState>;
+      };
+      const perm = await handleWithPerm.requestPermission({
+        mode: "readwrite",
+      });
       return perm === "granted";
     } catch {
       return false;

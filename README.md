@@ -6,11 +6,11 @@
 
 **The Modern Hybrid Text Editor for the Web**
 
-[![Version](https://img.shields.io/badge/version-1.1.4-10b981.svg?style=for-the-badge&logo=semver&logoColor=white)](package.json)
+[![Version](https://img.shields.io/badge/version-1.1.7-10b981.svg?style=for-the-badge&logo=semver&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-Apache--2.0-3b82f6.svg?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-61dafb.svg?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-8.0-646cff.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.3-646cff.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-f59e0b.svg?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 
   <p align="center">
@@ -42,7 +42,8 @@ Whether you need a quick notepad, an offline markdown notebook, a diagram design
 ### 📑 Advanced Multi-Tab & Workspace System
 
 - **Tab Management**: Pin (`Ctrl+Alt+P`), Lock (`Read-Only`), reorder with drag & drop, close saved tabs, or close to the right.
-- **Multi-Workspace**: Group working contexts into isolated named workspaces with instant session switching.
+- **Multi-Workspace & Folder Sync**: Group working contexts into isolated named workspaces with instant session switching, or link/export workspaces directly with local folders (`.workspace.scripta` manifest + ZIP fallback).
+- **Cloud Sync & Encryption**: Back up and synchronize workspaces via **GitHub** or **Dropbox** with client-side **AES-GCM 256-bit** encryption.
 - **Crash Recovery & Auto-Save**: Seamless session persistence powered by IndexedDB. Never lose uncommitted work on refresh or browser close.
 - **Reopen Closed Files**: Quickly recover closed tabs with `Ctrl + Shift + T`.
 
@@ -67,8 +68,10 @@ Whether you need a quick notepad, an offline markdown notebook, a diagram design
 ### 📊 Real-Time Interactive Live Previews
 
 - **Markdown & GitHub Flavored Tables**: Formatted preview sanitized via `DOMPurify` with real-time sync.
-- **Mermaid.js Diagrams**: Interactive flowcharts, sequence, Gantt, ER, class diagrams with vector SVG export.
-- **HTML & CSS Live Runner**: Interactive sandboxed sandbox iframe for web snippets.
+- **Mermaid.js Diagrams**: Interactive flowcharts, sequence, Gantt, ER, class diagrams with vector SVG/PNG export.
+- **LaTeX & Math (KaTeX)**: Render academic documents, inline/block equations, and scientific notation.
+- **CSV / JSON DataTable & Conditional Formatting**: Interactive sortable/filterable grid with custom cell decoration rules and merged-view options.
+- **HTML & CSS Live Runner**: Interactive sandboxed iframe for web snippets.
 - **Python WASM (Pyodide)**: Run Python scripts directly in-browser using WebAssembly.
 - **Vector SVG & Image Viewer**: Inspect raw vector SVGs or preview `.png`, `.jpg`, `.webp`, `.gif` with zoom & pan.
 
@@ -107,7 +110,7 @@ Whether you need a quick notepad, an offline markdown notebook, a diagram design
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [React 19](https://react.dev/) + [Vite 8](https://vitejs.dev/) + [TypeScript 5.9](https://www.typescriptlang.org/) (Strict mode, `verbatimModuleSyntax`)
+- **Framework**: [React 19](https://react.dev/) + [Vite 8](https://vitejs.dev/) + [TypeScript 6.0](https://www.typescriptlang.org/) (Strict mode, `verbatimModuleSyntax`)
 - **Editor Engine**: [CodeMirror 6](https://codemirror.net/) (Dynamic Compartments for theme, font size, language & syntax highlighting)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) + Semantic CSS Custom Properties
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)

@@ -11,6 +11,32 @@ import {
 import type { SupportedEncoding } from "../../../core/utils/encodingUtils";
 import { triggerFileDownload } from "../../../core/utils/downloadUtils";
 
+type FileSystemFileHandleWithPermissions = FileSystemFileHandle & {
+  queryPermission: (options: {
+    mode?: "read" | "readwrite";
+  }) => Promise<PermissionState>;
+  requestPermission: (options: {
+    mode?: "read" | "readwrite";
+  }) => Promise<PermissionState>;
+};
+
+interface WindowWithFilePicker extends Window {
+  showOpenFilePicker?: (options: {
+    multiple?: boolean;
+    excludeAcceptAllOption?: boolean;
+  }) => Promise<FileSystemFileHandle[]>;
+  showSaveFilePicker?: (options: {
+    suggestedName?: string;
+  }) => Promise<FileSystemFileHandle>;
+}
+
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException || err instanceof Error) &&
+    err.name === "AbortError"
+  );
+}
+
 export const isFileSystemAccessSupported =
   typeof window !== "undefined" && "showOpenFilePicker" in window;
 
@@ -60,8 +86,8 @@ export async function createFileTabFromHandle(
       imageDataUrl,
       fileLastModified: file.lastModified,
     };
-  } catch (err: any) {
-    if (err.name === "AbortError") return null;
+  } catch (err: unknown) {
+    if (isAbortError(err)) return null;
     console.error("Error reading file from handle:", err);
     return null;
   }
@@ -70,14 +96,17 @@ export async function createFileTabFromHandle(
 export async function openLocalFile(): Promise<FileTab | null> {
   if (isFileSystemAccessSupported) {
     try {
-      const [handle] = await (window as any).showOpenFilePicker({
-        multiple: false,
-        excludeAcceptAllOption: false,
-      });
+      const pickerWindow = window as WindowWithFilePicker;
+      if (pickerWindow.showOpenFilePicker) {
+        const [handle] = await pickerWindow.showOpenFilePicker({
+          multiple: false,
+          excludeAcceptAllOption: false,
+        });
 
-      return await createFileTabFromHandle(handle);
-    } catch (err: any) {
-      if (err.name === "AbortError") return null; // Người dùng hủy chọn
+        return await createFileTabFromHandle(handle);
+      }
+    } catch (err: unknown) {
+      if (isAbortError(err)) return null; // Người dùng hủy chọn
       console.error("Error opening file via File System Access API:", err);
     }
   }
@@ -142,12 +171,13 @@ async function verifyPermission(
   if (readWrite) {
     options.mode = "readwrite";
   }
+  const handleWithPerms = fileHandle as FileSystemFileHandleWithPermissions;
   // Check if permission was already granted
-  if ((await (fileHandle as any).queryPermission(options)) === "granted") {
+  if ((await handleWithPerms.queryPermission(options)) === "granted") {
     return true;
   }
   // Request permission to the file
-  if ((await (fileHandle as any).requestPermission(options)) === "granted") {
+  if ((await handleWithPerms.requestPermission(options)) === "granted") {
     return true;
   }
   return false;
@@ -160,8 +190,8 @@ export async function saveExistingFile(tab: FileTab): Promise<FileTab> {
     try {
       const hasPermission = await verifyPermission(tab.fileHandle, true);
       if (hasPermission) {
-        const writable = await (tab.fileHandle as any).createWritable();
-        await writable.write(encodedBytes);
+        const writable = await tab.fileHandle.createWritable();
+        await writable.write(new Uint8Array(encodedBytes));
         await writable.close();
 
         const now = Date.now();
@@ -174,8 +204,8 @@ export async function saveExistingFile(tab: FileTab): Promise<FileTab> {
           fileLastModified: now,
         };
       }
-    } catch (err: any) {
-      if (err.name === "AbortError") {
+    } catch (err: unknown) {
+      if (isAbortError(err)) {
         // User canceled permission prompt
         return tab;
       }
@@ -191,38 +221,43 @@ export async function saveFileAs(tab: FileTab): Promise<FileTab> {
 
   if (isFileSystemAccessSupported) {
     try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: tab.name,
-      });
+      const pickerWindow = window as WindowWithFilePicker;
+      if (pickerWindow.showSaveFilePicker) {
+        const handle = await pickerWindow.showSaveFilePicker({
+          suggestedName: tab.name,
+        });
 
-      const writable = await handle.createWritable();
-      await writable.write(encodedBytes);
-      await writable.close();
+        const writable = await handle.createWritable();
+        await writable.write(new Uint8Array(encodedBytes));
+        await writable.close();
 
-      const newName = handle.name || tab.name;
-      const { language, previewType } = detectLanguageFromFilename(newName);
-      const now = Date.now();
+        const newName = handle.name || tab.name;
+        const { language, previewType } = detectLanguageFromFilename(newName);
+        const now = Date.now();
 
-      return {
-        ...tab,
-        name: newName,
-        rawBuffer: encodedBytes,
-        savedContent: tab.content,
-        fileHandle: handle,
-        isModified: false,
-        language,
-        previewType,
-        lastSavedAt: now,
-        fileLastModified: now,
-      };
-    } catch (err: any) {
-      if (err.name === "AbortError") return tab;
+        return {
+          ...tab,
+          name: newName,
+          rawBuffer: encodedBytes,
+          savedContent: tab.content,
+          fileHandle: handle,
+          isModified: false,
+          language,
+          previewType,
+          lastSavedAt: now,
+          fileLastModified: now,
+        };
+      }
+    } catch (err: unknown) {
+      if (isAbortError(err)) return tab;
       console.error("Save As error:", err);
     }
   }
 
   // Fallback: download via anchor
-  const blob = new Blob([encodedBytes as any], { type: "text/plain" });
+  const blob = new Blob([new Uint8Array(encodedBytes)], {
+    type: "text/plain",
+  });
   triggerFileDownload(blob, tab.name);
 
   const now = Date.now();
