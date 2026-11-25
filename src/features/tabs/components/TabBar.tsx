@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -19,6 +19,8 @@ import type { FileTab } from "../../../core/types/file.types";
 import { dialog } from "../../../shared/dialog/dialogStore";
 import { TabContextMenu } from "./TabContextMenu";
 import { SortableTabItem } from "./SortableTabItem";
+import { ContextMenu } from "../../../shared/components/ContextMenu";
+import { SampleFilesMenuItems } from "../../editor/components/SampleFilesMenuItems";
 import { MdiIcon } from "../../../shared/components/MdiIcon";
 import {
   getFileIconConfig,
@@ -55,6 +57,21 @@ export const TabBar: React.FC<TabBarProps> = ({
     x: number;
     y: number;
   } | null>(null);
+
+  // Sample Files menu state for [+] button (long-press or right-click)
+  const [sampleMenuPos, setSampleMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const newTabLongPressTimerRef = useRef<number | null>(null);
+  const newTabLongPressTriggeredRef = useRef(false);
+
+  const clearNewTabLongPress = () => {
+    if (newTabLongPressTimerRef.current !== null) {
+      window.clearTimeout(newTabLongPressTimerRef.current);
+      newTabLongPressTimerRef.current = null;
+    }
+  };
 
   // Active dragged tab for DragOverlay visual preview
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -254,15 +271,39 @@ export const TabBar: React.FC<TabBarProps> = ({
         {/* New Tab Button - Highlighted with theme accent and smooth hover */}
         <button
           onClick={() => {
+            if (newTabLongPressTriggeredRef.current) {
+              newTabLongPressTriggeredRef.current = false;
+              return;
+            }
             createTab();
             onTabClick?.();
           }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            clearNewTabLongPress();
+            setSampleMenuPos({ x: e.clientX, y: e.clientY });
+          }}
+          onPointerDown={(e) => {
+            if (e.button !== 0 && e.pointerType === "mouse") return;
+            clearNewTabLongPress();
+            newTabLongPressTriggeredRef.current = false;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const menuX = e.clientX || rect.left;
+            const menuY = rect.bottom + 4;
+            newTabLongPressTimerRef.current = window.setTimeout(() => {
+              newTabLongPressTriggeredRef.current = true;
+              setSampleMenuPos({ x: menuX, y: menuY });
+            }, 400);
+          }}
+          onPointerUp={clearNewTabLongPress}
+          onPointerLeave={clearNewTabLongPress}
+          onPointerCancel={clearNewTabLongPress}
           className={`flex items-center justify-center rounded transition-all shrink-0 cursor-pointer ${
             isVertical
               ? "w-full py-1.5 px-2.5 bg-[var(--bg-surface-elevated)] hover:bg-[var(--accent)]/15 border border-[var(--border-color)] hover:border-[var(--accent)] text-[var(--text-main)] hover:text-[var(--accent)] text-xs font-medium gap-1.5 mt-1 shadow-2xs group"
               : "w-6 h-6 ml-0.5 bg-[var(--bg-surface)] hover:bg-[var(--accent)]/15 hover:border-[var(--accent)]/50 border border-transparent text-[var(--text-muted)] hover:text-[var(--accent)] shadow-2xs"
           }`}
-          title="New Tab (Alt+N)"
+          title="New Tab (Alt+N) • Hold or Right-Click for Sample Files"
         >
           <Plus className="w-3.5 h-3.5 text-[var(--accent)] group-hover:scale-110 transition-transform" />
           {isVertical && <span>New File</span>}
@@ -310,6 +351,17 @@ export const TabBar: React.FC<TabBarProps> = ({
             y={contextMenu.y}
             onClose={() => setContextMenu(null)}
           />
+        )}
+
+        {/* New Tab Sample Files Menu */}
+        {sampleMenuPos && (
+          <ContextMenu
+            x={sampleMenuPos.x}
+            y={sampleMenuPos.y}
+            onClose={() => setSampleMenuPos(null)}
+          >
+            <SampleFilesMenuItems onSelectSample={() => onTabClick?.()} />
+          </ContextMenu>
         )}
       </div>
     </DndContext>

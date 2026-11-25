@@ -6,7 +6,6 @@ import { WorkspaceMenuItems } from "../../features/workspace/components/Workspac
 import { WorkspaceFolderSyncMenuItems } from "../../features/workspace/components/WorkspaceFolderSyncMenuItems";
 import { ThemeMenuItems } from "../../features/settings/components/ThemeMenuItems";
 import { BookmarkMenuItems } from "../../features/editor/components/BookmarkMenuItems";
-import type { SupportedLanguage } from "../../core/types/file.types";
 import type { ScriptMetadata } from "../../features/scripts/types/script.types";
 import { DropdownMenu } from "../../shared/components/DropdownMenu";
 import { Z_INDEX } from "../../core/constants/zIndex";
@@ -60,22 +59,8 @@ import {
 import { DonateMenuItems } from "./DonateMenuItems";
 import { WELCOME_MD_CONTENT } from "../../core/data/defaultDocuments";
 import { ConvertCaseMenuItems } from "../../features/editor/components/ConvertCaseMenuItems";
-
-const LANGUAGE_OPTIONS: { id: SupportedLanguage; label: string }[] = [
-  { id: "markdown", label: "MARKDOWN" },
-  { id: "csv", label: "CSV / TSV" },
-  { id: "html", label: "HTML" },
-  { id: "javascript", label: "JAVASCRIPT" },
-  { id: "typescript", label: "TYPESCRIPT" },
-  { id: "css", label: "CSS" },
-  { id: "json", label: "JSON" },
-  { id: "python", label: "PYTHON" },
-  { id: "svg", label: "SVG" },
-  { id: "mermaid", label: "MERMAID" },
-  { id: "latex", label: "LATEX" },
-  { id: "plaintext", label: "PLAIN TEXT" },
-  { id: "other", label: "OTHER..." },
-];
+import { LANGUAGE_OPTIONS } from "../../core/constants/languages";
+import { SampleFilesMenuItems } from "../../features/editor/components/SampleFilesMenuItems";
 
 export interface MenuBarProps {
   onOpenPreferences?: () => void;
@@ -822,6 +807,12 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               else createTab("welcome.md", WELCOME_MD_CONTENT, "markdown");
             }}
           />
+          <DropdownMenu.Sub
+            label="Sample Files"
+            icon={<FileText className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+          >
+            <SampleFilesMenuItems />
+          </DropdownMenu.Sub>
           <DropdownMenu.Item
             label="Install App..."
             icon={
@@ -996,6 +987,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
                 else createTab("welcome.md", WELCOME_MD_CONTENT, "markdown");
               }}
             />
+            <DropdownMenu.Sub
+              label="Sample Files"
+              icon={
+                <FileText className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+              }
+              alignGutter
+            >
+              <SampleFilesMenuItems />
+            </DropdownMenu.Sub>
             <DropdownMenu.Item
               label="Install App..."
               icon={
