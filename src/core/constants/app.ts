@@ -14,6 +14,7 @@ export const LEGAL_LINKS = {
 export const DONATE_LINKS = {
   BUY_ME_A_COFFEE: "https://buymeacoffee.com/trongajtt",
   GITHUB_SPONSOR: "https://github.com/sponsors/TrongAJTT",
+  VIETQR: "https://www.trongajtt.com/donate?vietqr=1",
   AUTHOR_DONATE: "https://www.trongajtt.com/donate",
 } as const;
 
