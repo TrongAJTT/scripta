@@ -92,7 +92,7 @@ export const ConsoleAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderAc
         <button
           onClick={handleRunCode}
           disabled={isRunning}
-          className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-[var(--accent)] text-slate-950 font-bold hover:brightness-110 transition-all text-[10px] shadow-xs disabled:opacity-50"
+          className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-[var(--accent)] text-[var(--text-on-accent)] font-semibold hover:brightness-110 transition-all text-[10px] disabled:opacity-50 cursor-pointer"
           title="Run Code"
         >
           <Play className="w-3 h-3 fill-current" />
@@ -112,15 +112,20 @@ export const ConsoleAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderAc
   }, [setHeaderActions, handleRunCode, handleClear, isRunning]);
 
   return (
-    <div className="h-full w-full flex flex-col bg-[#0b0e14] text-[#c5cdd9] font-mono text-xs overflow-hidden select-none">
+    <div className="h-full w-full flex flex-col bg-[var(--bg-statusbar)] text-[var(--text-main)] font-mono text-xs overflow-hidden select-none">
       {/* Output Stream */}
       <div className="flex-1 p-4 overflow-auto space-y-2 select-text leading-relaxed">
         {logs.map((log, idx) => (
           <pre
             key={idx}
-            className={`whitespace-pre-wrap ${
-              log.includes('ERROR:') ? 'text-red-400' : log.includes('OUTPUT:') ? 'text-emerald-400' : 'text-slate-400'
-            }`}
+            style={{
+              color: log.includes("ERROR:")
+                ? "var(--status-danger-text)"
+                : log.includes("OUTPUT:")
+                  ? "var(--status-success-text)"
+                  : "var(--text-muted)",
+            }}
+            className="whitespace-pre-wrap"
           >
             {log}
           </pre>

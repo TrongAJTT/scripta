@@ -7,53 +7,56 @@
 ## 📌 Commit Message
 
 ```text
-feat(preview): add per-tab session state and WYSIWYG print export
+feat: add basic client-side LaTeX document support and live preview
 
-- Implement in-memory per-tab preview session store (previewSessionStore.ts) persisting filterQuery, currentPage, pageSize, sortState, and isMergedView across tab switches.
-- Add print/export preview capability with live DOM sandbox cloning, theme-aware print styling, and multi-page pagination support.
-- Allow preview adapters to override printing (e.g. HtmlAdapter using native iframe print).
-- Clean up DataTable reactivity, fix search filter rendering loop, and hook clearSession on tab close.
-- Add isAnyDecorationActive helper for responsive decoration indicator state.
+- Add LaTeX (.tex, .latex, .sty, .cls) language and preview support across file detection and menus.
+- Implement CodeMirror syntax highlighting for LaTeX using @codemirror/legacy-modes/mode/stex.
+- Implement client-side LaTeX compiler service with KaTeX math equation rendering, document structure parsing (sections, lists, tables, abstract, metadata), and DOMPurify sanitization.
+- Add LatexAdapter component displaying an academic paper-styled view with multi-page WYSIWYG print export support.
+- Register LaTeX preview adapter, icon, and preview threshold limits.
+- Update Workbox maximumFileSizeToCacheInBytes in vite.config.ts to accommodate PWA precaching.
 ```
 
 ---
 
 ## 📝 Detailed Change Log
 
-### 1. In-Memory Preview Session Management (`src/features/preview/store/`, `src/features/tabs/`)
+### 1. Language Definitions & Detection (`src/core/types/`, `src/core/utils/`, `src/app/layout/`)
 
-- [previewSessionStore.ts](file:///g:/TextEditor/src/features/preview/store/previewSessionStore.ts) (**NEW**):
-  - In-memory Zustand store managing `sessions: Record<string, TabPreviewSession>` per tab ID.
-  - Retains interactive preview parameters (`filterQuery`, `currentPage`, `pageSize`, `sortState`, `isMergedView`) when switching tabs without writing to persistent disk storage (resets on page reload).
-  - Provides `getSession`, `updateSession`, and `clearSession` actions.
-- [store.ts](file:///g:/TextEditor/src/features/tabs/store.ts):
-  - In `closeTab`, dynamically imports `previewSessionStore` to invoke `clearSession(id)` for the closed tab ID, preventing in-memory session leakage.
+- [file.types.ts](file:///g:/TextEditor/src/core/types/file.types.ts):
+  - Added `"latex"` to `SupportedLanguage` and `PreviewType` unions.
+- [fileDetection.ts](file:///g:/TextEditor/src/core/utils/fileDetection.ts):
+  - Mapped `.tex`, `.latex`, `.sty`, and `.cls` file extensions to `language: "latex"` and `previewType: "latex"`.
+  - Added default extension mapping (`"latex"` -> `"tex"`).
+  - Added heuristic content detection for typical LaTeX keywords (`\documentclass`, `\begin{document}`, `\section`, `\usepackage`, etc.).
+- [MenuBar.tsx](file:///g:/TextEditor/src/app/layout/MenuBar.tsx):
+  - Added `LATEX` option in the Language switcher dropdown.
 
-### 2. WYSIWYG Live DOM Print Engine (`src/core/utils/`, `src/features/preview/components/`, `src/features/preview/adapters/`)
+### 2. CodeMirror 6 Syntax Highlighting (`src/features/editor/components/`)
 
-- [printUtils.ts](file:///g:/TextEditor/src/core/utils/printUtils.ts) (**NEW**):
-  - Replaces custom HTML reconstruction with `printLiveElement(element)` for 100% visual fidelity ("What You See Is What You Print").
-  - Clones the target preview element into an isolated DOM sandbox container appended to `document.body`.
-  - Injects isolated `@media print` rules: hides the parent application DOM (`body > *:not(#sandbox)`), unconstrains all nested scroll/overflow heights (`height: auto !important`, `overflow: visible !important`), and unlocks `@page { margin: 12mm; size: auto; }` for natural multi-page pagination.
-  - Automatically neutralizes dark mode styles on print with paper-friendly light theme variables while preserving exact decoration highlights, table lines, and SVG diagrams via `print-color-adjust: exact !important`.
+- [CodeEditor.tsx](file:///g:/TextEditor/src/features/editor/components/CodeEditor.tsx):
+  - Integrated `StreamLanguage.define(stex)` from `@codemirror/legacy-modes/mode/stex` for native LaTeX code highlighting.
+
+### 3. LaTeX Compiler Service & Live Preview Adapter (`src/features/preview/`)
+
+- [latexCompilerService.ts](file:///g:/TextEditor/src/features/preview/services/latexCompilerService.ts) (**NEW**):
+  - Client-side compiler using KaTeX for high-performance math rendering (inline `$ ... $`, `\( ... \)`, display `$$ ... $$`, `\[ ... \]`, and environments `equation`, `align`, `gather`, `multline`).
+  - Parses document metadata (`\title`, `\author`, `\date`), section hierarchies (`\section`, `\subsection`, `\subsubsection`, `\paragraph`), formatting (`\textbf`, `\textit`, `\emph`, `\underline`, `\texttt`), lists (`itemize`, `enumerate`), tables (`tabular`), links (`\href`, `\url`), and online image references (`\includegraphics{https://...}`).
+  - Sanitizes compiled markup via `DOMPurify` with MathML tag whitelisting.
+- [LatexAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/LatexAdapter.tsx) (**NEW**):
+  - Renders compiled LaTeX content within a centered, responsive academic paper container (`<article>`) with dark/light mode typography.
+- [registry.ts](file:///g:/TextEditor/src/features/preview/adapters/registry.ts) & [types.ts](file:///g:/TextEditor/src/features/preview/adapters/types.ts):
+  - Registered `latex` in the adapter registry with `LATEX` badge and `Binary` icon.
 - [PreviewPanel.tsx](file:///g:/TextEditor/src/features/preview/components/PreviewPanel.tsx):
-  - Adds `Printer` action button to the unified preview header bar.
-  - Supports adapter-level print overrides via `setPrintHandler` with fallback to `printLiveElement(contentRef.current)`.
-- [HtmlAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/HtmlAdapter.tsx):
-  - Hooks `setPrintHandler` to delegate print commands directly to the embedded HTML iframe's own `contentWindow.print()`.
-- [types.ts](file:///g:/TextEditor/src/features/preview/adapters/types.ts):
-  - Extends `PreviewAdapterProps` with `setPrintHandler?: (fn: (() => void) | null) => void`.
+  - Bound `latex` iconType to `Binary` icon in the preview header.
+- [previewLimits.ts](file:///g:/TextEditor/src/core/constants/previewLimits.ts):
+  - Configured soft performance thresholds for LaTeX preview (4,000 lines / 400 KB).
 
-### 3. Data Table Reactivity & Print Refinements (`src/features/preview/components/`, `src/features/preview/adapters/`, `src/features/preview/types/`)
+### 4. Styles, Print Engine & PWA Build (`src/main.tsx`, `src/core/utils/`, `vite.config.ts`)
 
-- [DataTable.tsx](file:///g:/TextEditor/src/features/preview/components/DataTable.tsx):
-  - Requires `tabId` prop and binds interactive states (`sortState`, `currentPage`, `pageSize`, `isMergedView`) to `usePreviewSessionStore`.
-  - Fixed render-phase state update loop by moving search-driven page resets into a controlled `useEffect`.
-  - Added `data-no-print="true"` to pagination footer to exclude paging controls from physical printouts.
-- [DataTableHeaderActions.tsx](file:///g:/TextEditor/src/features/preview/components/DataTableHeaderActions.tsx):
-  - Added `select-text` styling classes to search input container to ensure unimpeded text selection and typing events.
-- [CsvAdapter.tsx](file:///g:/TextEditor/src/features/preview/adapters/CsvAdapter.tsx):
-  - Direct selector subscription for `sessions[tab.id]?.filterQuery` for instant, non-stale input re-renders.
-  - Uses `isAnyDecorationActive(decorationConfig)` to conditionally highlight the Decoration toolbar button.
-- [csvDecoration.types.ts](file:///g:/TextEditor/src/features/preview/types/csvDecoration.types.ts):
-  - Added `isAnyDecorationActive(config: CsvDecorationConfig): boolean` utility helper with safe optional chaining on `config.merge?.mode`.
+- [main.tsx](file:///g:/TextEditor/src/main.tsx):
+  - Imported `katex/dist/katex.min.css` globally for mathematical symbol fonts and rendering.
+- [printUtils.ts](file:///g:/TextEditor/src/core/utils/printUtils.ts):
+  - Added paper-article and KaTeX math specific print styles for crisp PDF exports.
+- [vite.config.ts](file:///g:/TextEditor/vite.config.ts):
+  - Configured `workbox.maximumFileSizeToCacheInBytes: 5 * 1024 * 1024` (5 MiB) to ensure complete PWA offline precaching.

@@ -1,41 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import type { PreviewAdapterProps } from './types';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import type { PreviewAdapterProps } from "./types";
+import { Image as ImageIcon } from "lucide-react";
+import { PreviewZoomControls } from "../components/PreviewZoomControls";
+import { EmptyState } from "../../../shared/components/EmptyState";
 
-export const ImageAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderActions }) => {
+export const ImageAdapter: React.FC<PreviewAdapterProps> = ({
+  tab,
+  setHeaderActions,
+}) => {
   const [zoom, setZoom] = useState(1);
 
   // Inject zoom controls into unified PreviewPanel header
   useEffect(() => {
-    if (!tab.imageDataUrl) return;
+    if (!tab.imageDataUrl) {
+      setHeaderActions?.(null);
+      return;
+    }
 
     setHeaderActions?.(
-      <div className="flex items-center gap-1 select-none">
-        <button
-          onClick={() => setZoom((z) => Math.max(0.2, Number((z - 0.2).toFixed(1))))}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)]"
-          title="Zoom out"
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-        <span className="px-1 font-mono text-[10px] text-[var(--text-main)] min-w-[34px] text-center">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          onClick={() => setZoom((z) => Math.min(5, Number((z + 0.2).toFixed(1))))}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)]"
-          title="Zoom in"
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => setZoom(1)}
-          className="p-1 text-[var(--text-muted)] hover:text-[var(--text-highlight)] transition-colors rounded hover:bg-[var(--bg-surface-elevated)] border-l border-[var(--border-color)] ml-0.5 pl-1.5"
-          title="Reset Zoom"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      <PreviewZoomControls
+        zoom={zoom}
+        onZoomChange={setZoom}
+        onReset={() => setZoom(1)}
+      />,
     );
 
     return () => setHeaderActions?.(null);
@@ -43,18 +30,23 @@ export const ImageAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderActi
 
   if (!tab.imageDataUrl) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-xs text-[var(--text-muted)]">
-        No image data loaded
-      </div>
+      <EmptyState
+        icon={<ImageIcon className="w-10 h-10 stroke-[1.25]" />}
+        title="No Image Data Loaded"
+        description="Open or drop an image file (.png, .jpg, .webp, .gif) to view it here."
+      />
     );
   }
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden relative">
+    <div className="h-full w-full flex flex-col overflow-hidden relative bg-[var(--bg-preview)]">
       <div className="flex-1 w-full h-full overflow-auto flex items-center justify-center p-8">
         <div
-          className="transition-transform duration-100 ease-out shadow-2xl rounded-lg overflow-hidden border border-[var(--border-color)] bg-[var(--bg-surface)] max-w-full max-h-full flex items-center justify-center"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+          className="transition-transform duration-100 ease-out rounded overflow-hidden border border-[var(--border-color)] bg-[var(--bg-surface)] max-w-full max-h-full flex items-center justify-center"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: "center center",
+          }}
         >
           <img
             src={tab.imageDataUrl}

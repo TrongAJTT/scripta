@@ -1,5 +1,4 @@
 import type { MermaidTheme, ThemeMode } from "../../../core/types/file.types";
-import mermaid from "mermaid";
 import {
   TIMESTAMP_MS,
   resolveExportFileName,
@@ -31,10 +30,11 @@ export function resolveMermaidTheme(
 /**
  * Initialize or re-initialize Mermaid with the designated theme
  */
-export function applyMermaidTheme(
+export async function applyMermaidTheme(
   configuredTheme: MermaidTheme = "auto",
   appTheme: ThemeMode = "dark",
-): void {
+): Promise<typeof import("mermaid").default> {
+  const { default: mermaid } = await import("mermaid");
   const theme = resolveMermaidTheme(configuredTheme, appTheme);
   mermaid.initialize({
     startOnLoad: false,
@@ -42,6 +42,7 @@ export function applyMermaidTheme(
     securityLevel: "loose",
     fontFamily: "var(--font-sans)",
   });
+  return mermaid;
 }
 
 /**

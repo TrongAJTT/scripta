@@ -3,8 +3,6 @@ import {
   Search,
   RotateCcw,
   Keyboard,
-  AlertTriangle,
-  AlertCircle,
   Check,
   Trash2,
 } from "lucide-react";
@@ -16,6 +14,8 @@ import {
 } from "../../../core/commands/registry";
 import { useKeybindingStore } from "../../../core/commands/keybindingStore";
 import { ModalWrapper } from "../../../shared/components/ModalWrapper";
+import { InlineBanner } from "../../../shared/components/InlineBanner";
+import { dialog } from "../../../shared/dialog/dialogStore";
 
 interface ShortcutMapperModalProps {
   isOpen: boolean;
@@ -165,8 +165,24 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
       footer={
         <>
           <button
-            onClick={resetAll}
-            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-rose-400 transition-colors"
+            type="button"
+            onClick={() => {
+              void (async () => {
+                const confirmed = await dialog.confirm({
+                  title: "Reset All Shortcuts",
+                  message:
+                    "Are you sure you want to restore all keyboard shortcuts to their default bindings?",
+                  confirmText: "Reset All",
+                  cancelText: "Cancel",
+                  variant: "warning",
+                  defaultFocus: "cancel",
+                });
+                if (confirmed) {
+                  resetAll();
+                }
+              })();
+            }}
+            className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset All to Defaults</span>
@@ -247,7 +263,13 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
                         {cmd.category}
                       </span>
                       {isModified && (
-                        <span className="text-[9px] px-1 rounded-xs bg-amber-500/20 text-amber-400 font-medium">
+                        <span
+                          style={{
+                            backgroundColor: "var(--status-warning-bg)",
+                            color: "var(--status-warning-text)",
+                          }}
+                          className="text-[9px] px-1 rounded-xs font-medium"
+                        >
                           Modified
                         </span>
                       )}
@@ -281,7 +303,11 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
                             handleCancelEdit();
                           }}
                           title="Remove shortcut"
-                          className="px-2 py-1 text-xs rounded-sm border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-1"
+                          style={{
+                            borderColor: "var(--status-danger-border)",
+                            color: "var(--status-danger-text)",
+                          }}
+                          className="px-2 py-1 text-xs rounded-sm border hover:bg-[var(--status-danger-bg)] transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" /> Clear
                         </button>
@@ -316,7 +342,7 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
                             <button
                               onClick={() => handleDeleteKeybinding(cmd.id)}
                               title="Delete shortcut (disable)"
-                              className="p-1 text-[var(--text-subtle)] hover:text-rose-400 transition-colors"
+                              className="p-1 text-[var(--text-subtle)] hover:text-[var(--status-danger-text)] transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -327,7 +353,7 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
                               onClick={() => resetKeybinding(cmd.id)}
                               title="Reset to default"
                               disabled={!isModified}
-                              className="p-1 text-[var(--text-subtle)] hover:text-amber-400 disabled:opacity-20 transition-colors"
+                              className="p-1 text-[var(--text-subtle)] hover:text-[var(--status-warning-text)] disabled:opacity-20 transition-colors cursor-pointer"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
@@ -340,14 +366,13 @@ export const ShortcutMapperModal: React.FC<ShortcutMapperModalProps> = ({
 
                 {/* Conflict warnings */}
                 {isEditing && conflictWarning && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-xs mt-1 animate-fade-in">
-                    {conflictWarning.includes("⚠️") ? (
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    ) : (
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    )}
-                    <span>{conflictWarning}</span>
-                  </div>
+                  <InlineBanner
+                    variant="warning"
+                    compact
+                    dismissible={false}
+                    message={conflictWarning}
+                    className="mt-1"
+                  />
                 )}
               </div>
             );

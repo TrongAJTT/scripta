@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { PreviewAdapterProps } from './types';
 import { Copy, Check, Hash, Type, FileText } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/EmptyState';
 
 export const TextAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderActions }) => {
   const [isMono, setIsMono] = useState(false);
@@ -80,13 +81,11 @@ export const TextAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderActio
 
   if (!content) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] select-none">
-        <FileText className="w-12 h-12 stroke-[1.2] text-[var(--text-subtle)] mb-3" />
-        <p className="text-xs font-medium text-[var(--text-main)]">Empty Text Document</p>
-        <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-xs">
-          Type text in the editor to see formatted reading view here.
-        </p>
-      </div>
+      <EmptyState
+        icon={<FileText className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty Text Document"
+        description="Type text in the editor to see formatted reading view here."
+      />
     );
   }
 

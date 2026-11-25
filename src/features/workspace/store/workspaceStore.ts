@@ -106,12 +106,14 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
 
     const editorTabs = useEditorStore.getState().tabs;
     const activeTabId = useEditorStore.getState().activeTabId;
+    const tabGroups = useEditorStore.getState().tabGroups;
 
     const updatedWs: WorkspaceSession = {
       ...currentWs,
       updatedAt: Date.now(),
       activeTabId,
       tabs: editorTabs,
+      tabGroups,
     };
 
     await saveWorkspace(updatedWs);
@@ -153,6 +155,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
 
       useEditorStore.setState({
         tabs: restoredTabs,
+        tabGroups: targetWs.tabGroups || [],
         activeTabId: activeId,
       });
     }
@@ -310,6 +313,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
 
       useEditorStore.setState({
         tabs: restoredTabs,
+        tabGroups: nextWs.tabGroups || [],
         activeTabId: activeId,
       });
 
@@ -395,6 +399,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
 
       useEditorStore.setState({
         tabs: restoredTabs,
+        tabGroups: targetWs.tabGroups || [],
         activeTabId: activeId,
       });
     }

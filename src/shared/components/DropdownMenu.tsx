@@ -121,7 +121,7 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
         disabled
           ? "opacity-40 cursor-not-allowed text-[var(--text-muted)]"
           : danger
-            ? "text-red-500 hover:bg-red-500/10 cursor-pointer"
+            ? "text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] cursor-pointer"
             : "text-[var(--text-main)] hover:bg-[var(--bg-tab-hover)] hover:text-[var(--text-highlight)] cursor-pointer"
       } ${className}`}
     >

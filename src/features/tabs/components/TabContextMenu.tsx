@@ -12,14 +12,18 @@ import {
   Trash2,
   Layout,
   Check,
-  PencilLine,
+  Layers,
+  Plus,
+  Ungroup,
 } from "lucide-react";
 import { useEditorStore } from "../store";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
 import type { FileTab, TabBarPosition } from "../../../core/types/file.types";
 import { TAB_BAR_POSITION_OPTIONS } from "../../../core/constants/tabBarPositions";
+import { TAB_GROUP_COLOR_MAP } from "../../../core/constants/tabGroups";
 import { ContextMenu } from "../../../shared/components/ContextMenu";
 import { dialog } from "../../../shared/dialog/dialogStore";
+import { RenameTabMenuItem } from "./RenameTabMenuItem";
 
 export interface TabContextMenuProps {
   tab: FileTab;
@@ -36,7 +40,6 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 }) => {
   const togglePinTab = useEditorStore((s) => s.togglePinTab);
   const toggleLockTab = useEditorStore((s) => s.toggleLockTab);
-  const renameTab = useEditorStore((s) => s.renameTab);
   const closeTab = useEditorStore((s) => s.closeTab);
   const closeOtherTabs = useEditorStore((s) => s.closeOtherTabs);
   const closeToRightTabs = useEditorStore((s) => s.closeToRightTabs);
@@ -47,6 +50,9 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
   const moveTabToWorkspace = useEditorStore((s) => s.moveTabToWorkspace);
   const tabBarPosition = useEditorStore((s) => s.settings.tabBarPosition);
   const updateSettings = useEditorStore((s) => s.updateSettings);
+  const tabGroups = useEditorStore((s) => s.tabGroups);
+  const createTabGroup = useEditorStore((s) => s.createTabGroup);
+  const assignTabToGroup = useEditorStore((s) => s.assignTabToGroup);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -74,36 +80,68 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
           tab.isLocked ? (
             <Unlock className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
           ) : (
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <Lock className="w-3.5 h-3.5 text-[var(--status-warning-text)]" />
           )
         }
         onSelect={() => toggleLockTab(tab.id)}
       />
 
       {/* 3. Rename tab */}
-      <ContextMenu.Item
-        label="Rename"
-        icon={<PencilLine className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
-        onSelect={async () => {
-          const newName = await dialog.prompt({
-            title: "Rename Tab",
-            message: "Enter a new name for the tab",
-            initialValue: tab.name,
-            validate: (value) => {
-              if (value.trim().length === 0) {
-                return "Name cannot be empty";
-              }
-              return null;
-            },
-          });
-          const trimmedName = newName?.trim();
-          if (trimmedName) {
-            renameTab(tab.id, trimmedName);
-          }
-        }}
-      />
+      <RenameTabMenuItem tab={tab} />
 
-      {/* 4. Move to Workspace Submenu */}
+      {/* 4. Tab Group Submenu */}
+      <ContextMenu.Sub
+        label="Add to Group"
+        icon={<Layers className="w-3.5 h-3.5 text-[var(--accent)]" />}
+      >
+        <ContextMenu.Item
+          label="New Group..."
+          icon={<Plus className="w-3.5 h-3.5 text-[var(--accent)]" />}
+          onSelect={async () => {
+            const name = await dialog.prompt({
+              title: "New Tab Group",
+              message: "Enter a name for the new tab group",
+              initialValue: "Group",
+              validate: (value) =>
+                value.trim().length === 0 ? "Group name cannot be empty" : null,
+            });
+            const trimmed = name?.trim();
+            if (trimmed) {
+              createTabGroup(trimmed, "emerald", tab.id);
+            }
+          }}
+        />
+        {tabGroups.length > 0 && <ContextMenu.Separator />}
+        {tabGroups.map((g) => {
+          const isCurrent = tab.groupId === g.id;
+          return (
+            <ContextMenu.Item
+              key={g.id}
+              label={isCurrent ? `${g.name} (Current)` : g.name}
+              icon={
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block"
+                  style={{
+                    backgroundColor:
+                      TAB_GROUP_COLOR_MAP[g.color] || "var(--accent)",
+                  }}
+                />
+              }
+              onSelect={() => assignTabToGroup(tab.id, g.id)}
+            />
+          );
+        })}
+      </ContextMenu.Sub>
+
+      {tab.groupId && (
+        <ContextMenu.Item
+          label="Remove from Group"
+          icon={<Ungroup className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+          onSelect={() => assignTabToGroup(tab.id, null)}
+        />
+      )}
+
+      {/* 5. Move to Workspace Submenu */}
       <ContextMenu.Sub
         label="Move to Workspace"
         icon={
@@ -163,7 +201,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       {/* 9. Close All */}
       <ContextMenu.Item
         label="Close All"
-        icon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
+        icon={<Trash2 className="w-3.5 h-3.5 text-[var(--status-danger-text)]" />}
         danger
         onSelect={() => void closeAllTabsWithPrompt()}
       />

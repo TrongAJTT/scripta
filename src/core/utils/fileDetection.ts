@@ -60,6 +60,12 @@ export function detectLanguageFromFilename(filename: string): {
     case "tsv":
       return { language: "csv", previewType: "csv" };
 
+    case "tex":
+    case "latex":
+    case "sty":
+    case "cls":
+      return { language: "latex", previewType: "latex" };
+
     case "py":
       return { language: "python", previewType: "console" };
 
@@ -116,6 +122,8 @@ export function getDefaultExtensionForLanguage(
       return "yml";
     case "sql":
       return "sql";
+    case "latex":
+      return "tex";
     case "plaintext":
     case "other":
     default:
@@ -155,6 +163,8 @@ export function getPreviewTypeForLanguage(
       return "css";
     case "csv":
       return "csv";
+    case "latex":
+      return "latex";
     default:
       return "none";
   }
@@ -287,6 +297,15 @@ export function detectLanguageFromContent(
         return "csv";
       }
     }
+  }
+
+  // 10. LaTeX: typical documentclass, begin{document}, sections, or math environments
+  if (
+    /\\(?:documentclass|begin\{(?:document|equation|align|tabular|figure|article|tikzpicture)\}|section\*?\{|usepackage)/.test(
+      trimmed,
+    )
+  ) {
+    return "latex";
   }
 
   return null;

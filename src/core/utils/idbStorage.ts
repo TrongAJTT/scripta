@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from "idb";
-import type { FileTab, RecentFileEntry } from "../types/file.types";
+import type { FileTab, RecentFileEntry, TabGroup } from "../types/file.types";
 import type {
   ScriptFunction,
   ScriptMetadata,
@@ -27,6 +27,7 @@ const DEVICE_AUTH_KEY_ID = "auth_storage_key";
 interface SessionRecord {
   tabs: FileTab[];
   activeTabId: string | null;
+  tabGroups?: TabGroup[];
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -105,6 +106,7 @@ async function getOrCreateDeviceKey(): Promise<CryptoKey | null> {
 export async function saveSessionTabs(
   tabs: FileTab[],
   activeTabId: string | null,
+  tabGroups?: TabGroup[],
 ): Promise<void> {
   try {
     const db = await getDB();
@@ -112,7 +114,7 @@ export async function saveSessionTabs(
     try {
       await db.put(
         STORE_NAME,
-        { tabs, activeTabId },
+        { tabs, activeTabId, tabGroups },
         "current_session",
       );
     } catch {
@@ -124,7 +126,7 @@ export async function saveSessionTabs(
       });
       await db.put(
         STORE_NAME,
-        { tabs: sanitizedTabs, activeTabId },
+        { tabs: sanitizedTabs, activeTabId, tabGroups },
         "current_session",
       );
     }

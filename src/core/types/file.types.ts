@@ -13,6 +13,7 @@ export type SupportedLanguage =
   | "yaml"
   | "sql"
   | "mermaid"
+  | "latex"
   | "other";
 
 export type PreviewType =
@@ -26,6 +27,7 @@ export type PreviewType =
   | "json"
   | "css"
   | "csv"
+  | "latex"
   | "none";
 
 export type PreviewMode = "auto" | "split" | "editor-only" | "preview-only";
@@ -39,6 +41,21 @@ export interface CursorPosition {
 }
 
 import type { SupportedEncoding } from "../utils/encodingUtils";
+
+export type TabGroupColor =
+  | "emerald"
+  | "blue"
+  | "purple"
+  | "amber"
+  | "rose"
+  | "slate";
+
+export interface TabGroup {
+  id: string;
+  name: string;
+  color: TabGroupColor;
+  collapsed?: boolean;
+}
 
 export interface FileTab {
   id: string;
@@ -59,6 +76,7 @@ export interface FileTab {
   isPinned?: boolean; // Tab được ghim
   isLocked?: boolean; // Tab bị khóa (read-only)
   bookmarks?: number[]; // Danh sách các dòng được đánh dấu (1-based)
+  groupId?: string; // ID nhóm tab (nếu thuộc một nhóm)
 }
 
 export type ThemeMode = "dark" | "light" | "system";

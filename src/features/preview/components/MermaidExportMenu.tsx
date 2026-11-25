@@ -59,11 +59,13 @@ export const MermaidExportMenu: React.FC<MermaidExportMenuProps> = ({
     <div className={`relative inline-block ${className}`} ref={menuRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-xs text-[var(--text-main)] hover:text-[var(--text-highlight)] transition-colors cursor-pointer"
+        className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-xs text-[var(--text-main)] hover:text-[var(--text-highlight)] transition-colors cursor-pointer"
         title="Export Diagram (SVG / PNG / JPG / WEBP)"
       >
         <Download className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <span className="font-semibold text-[11px]">Export</span>
+        <span className="hidden sm:inline font-semibold text-[11px]">
+          Export
+        </span>
         <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
       </button>
 

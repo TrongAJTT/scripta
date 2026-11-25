@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import type { ScriptMetadata } from '../types/script.types';
 import { BUILTIN_TEMPLATES } from '../data/builtinTemplates';
-import { MODAL_LAYOUT } from '../../../shared/constants/modal';
 import { Z_INDEX } from '../../../core/constants/zIndex';
-import { Folder, X, CheckSquare, Square } from 'lucide-react';
+import { Folder, CheckSquare, Square } from 'lucide-react';
+import { ModalWrapper } from '../../../shared/components/ModalWrapper';
 
 interface AddTemplateModalProps {
   isOpen: boolean;
@@ -105,39 +105,19 @@ export const AddTemplateModal: React.FC<AddTemplateModalProps> = ({
   };
 
   return (
-    <div
-      style={{ zIndex: Z_INDEX.MODAL_SECONDARY }}
-      className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 md:p-6 animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <ModalWrapper
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidthClass="max-w-2xl"
+      zIndex={Z_INDEX.MODAL_SECONDARY}
+      title="Add Built-in Template Scripts"
+      subtitle="Select pre-made automated scripts and organize them into workspace folders"
     >
-      <div
-        className={`w-[660px] max-w-[95vw] ${MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES} bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg shadow-2xl flex flex-col overflow-hidden text-[var(--text-main)]`}
-        onClick={(e) => e.stopPropagation()}
+      {/* Content Form */}
+      <form
+        onSubmit={handleConfirm}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden p-4 gap-3"
       >
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-toolbar)] shrink-0">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--text-highlight)] flex items-center gap-2">
-              Add Built-in Template Scripts
-            </h3>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-              Select pre-made automated scripts and organize them into workspace folders
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[var(--bg-tab-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
-            title="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content Form */}
-        <form onSubmit={handleConfirm} className="flex-1 min-h-0 flex flex-col overflow-hidden p-4 gap-3">
           {/* Import Mode Options Box */}
           <div className="p-3 bg-[var(--bg-editor)] border border-[var(--border-color)] rounded-md shrink-0 flex flex-col gap-2">
             <span className="text-[11px] font-semibold text-[var(--accent)] uppercase tracking-wider">
@@ -344,7 +324,6 @@ export const AddTemplateModal: React.FC<AddTemplateModalProps> = ({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalWrapper>
   );
 };

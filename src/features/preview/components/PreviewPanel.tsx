@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { Suspense, useState, useMemo, useRef, useCallback } from "react";
 import type { FileTab } from "../../../core/types/file.types";
 import { getPreviewAdapter } from "../adapters/registry";
 import {
@@ -13,6 +13,7 @@ import {
   Palette,
   Table as TableIcon,
   Printer,
+  Binary,
 } from "lucide-react";
 import { useEditorStore } from "../../tabs/store";
 import { checkPreviewThreshold } from "../../../core/constants/previewLimits";
@@ -93,6 +94,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
         return <Palette className="w-3.5 h-3.5 text-pink-400" />;
       case "csv":
         return <TableIcon className="w-3.5 h-3.5 text-emerald-500" />;
+      case "latex":
+        return <Binary className="w-3.5 h-3.5 text-[var(--accent-purple)]" />;
       case "mermaid":
       case "markdown":
         return <Eye className="w-3.5 h-3.5 text-[var(--accent)]" />;
@@ -104,11 +107,15 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
   return (
     <div className="h-full w-full flex flex-col bg-[var(--bg-preview)] border-l border-[var(--border-color)] overflow-hidden">
       {/* Unified Single Header Bar */}
-      <div className="h-9 px-3 flex items-center justify-between bg-[var(--bg-toolbar)] border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] font-medium shrink-0 select-none">
+      <div className="min-h-9 py-1 sm:py-0 sm:h-9 px-2 sm:px-3 flex flex-wrap items-center justify-between gap-1.5 bg-[var(--bg-toolbar)] border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] font-medium shrink-0 select-none">
         {/* Leading: Icon + Fixed PREVIEW PANEL Title + optional CONSOLE Badge */}
         <div className="flex items-center gap-2 min-w-0">
           {renderIcon()}
-          <span className="uppercase tracking-wider font-bold text-xs text-[var(--text-main)]">
+          <span
+            className={`uppercase tracking-wider font-bold text-xs text-[var(--text-main)] truncate ${
+              !thresholdResult && headerActions ? "hidden sm:inline" : ""
+            }`}
+          >
             PREVIEW PANEL
           </span>
           {adapter.badge === "CONSOLE" && (
@@ -142,12 +149,20 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
             onRenderAnyway={() => bypassPreviewThreshold(tab.id)}
           />
         ) : (
-          <AdapterComponent
-            key={`${tab.id}-${tab.previewType}`}
-            tab={tab}
-            setHeaderActions={setHeaderActions}
-            setPrintHandler={handleSetPrintHandler}
-          />
+          <Suspense
+            fallback={
+              <div className="h-full w-full flex items-center justify-center text-xs text-[var(--text-muted)]">
+                Loading preview...
+              </div>
+            }
+          >
+            <AdapterComponent
+              key={`${tab.id}-${tab.previewType}`}
+              tab={tab}
+              setHeaderActions={setHeaderActions}
+              setPrintHandler={handleSetPrintHandler}
+            />
+          </Suspense>
         )}
       </div>
     </div>

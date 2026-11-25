@@ -3,6 +3,7 @@ import type { ScriptMetadata } from '../types/script.types';
 import { useEditorStore } from '../../tabs/store';
 import { useScriptRunner } from '../hooks/useScriptRunner';
 import { Z_INDEX } from '../../../core/constants/zIndex';
+import { ModalWrapper } from '../../../shared/components/ModalWrapper';
 
 interface ScriptRunModalProps {
   script: ScriptMetadata;
@@ -45,86 +46,22 @@ export const ScriptRunModal: React.FC<ScriptRunModalProps> = ({ script, isOpen, 
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: Z_INDEX.MODAL_SECONDARY,
-        backdropFilter: 'blur(2px)',
+    <ModalWrapper
+      isOpen={isOpen}
+      onClose={() => {
+        if (!isRunning) onClose();
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isRunning) onClose();
-      }}
+      maxWidthClass="max-w-xl"
+      containerHeightClass="h-auto max-h-[85vh]"
+      zIndex={Z_INDEX.MODAL_SECONDARY}
+      title={`Run Script: ${script.name}`}
+      subtitle={script.description}
     >
-      <div
-        style={{
-          width: '580px',
-          maxWidth: '90vw',
-          maxHeight: '85vh',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          color: 'var(--text-main)',
-        }}
+      {/* Content Body */}
+      <form
+        onSubmit={handleExecute}
+        className="p-4 overflow-y-auto flex flex-col gap-3.5 flex-1 text-[var(--text-main)]"
       >
-        {/* Header */}
-        <div
-          style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: 'var(--bg-app)',
-          }}
-        >
-          <div>
-            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-              Run Script: {script.name}
-            </h3>
-            {script.description && (
-              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
-                {script.description}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isRunning}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '16px',
-              padding: '2px 6px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Content Body */}
-        <form
-          onSubmit={handleExecute}
-          style={{
-            padding: '16px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-            flex: 1,
-          }}
-        >
           {/* Dynamic Inputs Form */}
           {script.inputs.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -366,7 +303,6 @@ export const ScriptRunModal: React.FC<ScriptRunModalProps> = ({ script, isOpen, 
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalWrapper>
   );
 };

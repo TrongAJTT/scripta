@@ -2,12 +2,13 @@ import React, { useEffect, useState, useRef } from "react";
 import type { PreviewAdapterProps } from "./types";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import mermaid from "mermaid";
-import { AlertCircle } from "lucide-react";
+import { FileText } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "../../tabs/store";
 import { applyMermaidTheme } from "../services/mermaidExportService";
 import { MermaidExportMenu } from "../components/MermaidExportMenu";
+import { EmptyState } from "../../../shared/components/EmptyState";
+import { InlineBanner } from "../../../shared/components/InlineBanner";
 
 export const MarkdownAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
   const [renderedHtml, setRenderedHtml] = useState<string>("");
@@ -45,58 +46,80 @@ export const MarkdownAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
     const mermaidBlocks = containerRef.current.querySelectorAll(
       "pre code.language-mermaid",
     );
+    if (mermaidBlocks.length === 0) return;
 
-    applyMermaidTheme(mermaidTheme, appTheme);
+    let isCancelled = false;
 
-    mermaidBlocks.forEach(async (block, idx) => {
-      try {
-        const code = block.textContent || "";
-        const id = `mermaid-block-${idx}-${Date.now()}`;
-        const { svg } = await mermaid.render(id, code);
-        const parent = block.parentElement;
-        if (parent) {
-          const wrapper = document.createElement("div");
-          wrapper.className =
-            "my-4 relative group rounded-lg border border-[var(--border-color)] bg-[var(--bg-statusbar)] p-4 flex flex-col items-center overflow-x-auto";
+    void applyMermaidTheme(mermaidTheme, appTheme).then((mermaid) => {
+      if (isCancelled) return;
+      mermaidBlocks.forEach(async (block, idx) => {
+        try {
+          const code = block.textContent || "";
+          const id = `mermaid-block-${idx}-${Date.now()}`;
+          const { svg } = await mermaid.render(id, code);
+          if (isCancelled) return;
+          const parent = block.parentElement;
+          if (parent) {
+            const wrapper = document.createElement("div");
+            wrapper.className =
+              "my-4 relative group rounded-lg border border-[var(--border-color)] bg-[var(--bg-statusbar)] p-4 flex flex-col items-center overflow-x-auto";
 
-          // Action button bar for this diagram
-          const toolbar = document.createElement("div");
-          toolbar.className =
-            "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10";
-          wrapper.appendChild(toolbar);
+            // Action button bar for this diagram
+            const toolbar = document.createElement("div");
+            toolbar.className =
+              "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10";
+            wrapper.appendChild(toolbar);
 
-          const diagramContainer = document.createElement("div");
-          diagramContainer.className = "w-full flex justify-center";
-          diagramContainer.innerHTML = svg;
-          wrapper.appendChild(diagramContainer);
+            const diagramContainer = document.createElement("div");
+            diagramContainer.className = "w-full flex justify-center";
+            diagramContainer.innerHTML = svg;
+            wrapper.appendChild(diagramContainer);
 
-          parent.replaceWith(wrapper);
+            parent.replaceWith(wrapper);
 
-          // Mount React ExportMenu inside toolbar
-          const root = createRoot(toolbar);
-          const diagramBaseName = tab.name
-            ? `${tab.name}-diagram-${idx + 1}`
-            : `diagram-${idx + 1}`;
-          root.render(
-            <MermaidExportMenu
-              svgContent={svg}
-              baseFileName={diagramBaseName}
-            />,
-          );
+            // Mount React ExportMenu inside toolbar
+            const root = createRoot(toolbar);
+            const diagramBaseName = tab.name
+              ? `${tab.name}-diagram-${idx + 1}`
+              : `diagram-${idx + 1}`;
+            root.render(
+              <MermaidExportMenu
+                svgContent={svg}
+                baseFileName={diagramBaseName}
+              />,
+            );
+          }
+        } catch {
+          // Fallback to plain code block
         }
-      } catch {
-        // Fallback to plain code block
-      }
+      });
     });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [renderedHtml, mermaidTheme, appTheme, tab.name]);
+
+  if (!(tab.content || "").trim()) {
+    return (
+      <EmptyState
+        icon={<FileText className="w-10 h-10 stroke-[1.25]" />}
+        title="Empty Markdown Document"
+        description="Start writing Markdown, tables, or fenced Mermaid blocks to see the formatted preview."
+      />
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-auto p-6 relative">
       {hasRenderError && (
-        <div className="mb-4 p-3 rounded-md bg-red-950/40 border border-red-800/60 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-          <span>{hasRenderError}</span>
-        </div>
+        <InlineBanner
+          variant="error"
+          compact
+          dismissible={false}
+          message={hasRenderError}
+          className="mb-4"
+        />
       )}
       <div
         ref={containerRef}

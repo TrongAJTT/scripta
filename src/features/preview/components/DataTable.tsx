@@ -76,15 +76,18 @@ export const DataTable: React.FC<DataTableProps> = ({
     filterQuery: "",
     currentPage: 1,
     pageSize: 50,
-    sortState: { column: null as string | null, direction: null as "asc" | "desc" | null },
+    sortState: {
+      column: null as string | null,
+      direction: null as "asc" | "desc" | null,
+    },
     isMergedView: false,
   };
 
   const sortState: SortState = session.sortState;
   const setSortState = useCallback(
     (updater: SortState | ((prev: SortState) => SortState)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.sortState
-        ?? { column: null, direction: null };
+      const prev = usePreviewSessionStore.getState().sessions[tabId]
+        ?.sortState ?? { column: null, direction: null };
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { sortState: next });
     },
@@ -94,7 +97,8 @@ export const DataTable: React.FC<DataTableProps> = ({
   const currentPage = session.currentPage;
   const setCurrentPage = useCallback(
     (updater: number | ((prev: number) => number)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.currentPage ?? 1;
+      const prev =
+        usePreviewSessionStore.getState().sessions[tabId]?.currentPage ?? 1;
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { currentPage: next });
     },
@@ -111,7 +115,9 @@ export const DataTable: React.FC<DataTableProps> = ({
   const isMergedView = session.isMergedView;
   const setIsMergedView = useCallback(
     (updater: boolean | ((prev: boolean) => boolean)) => {
-      const prev = usePreviewSessionStore.getState().sessions[tabId]?.isMergedView ?? false;
+      const prev =
+        usePreviewSessionStore.getState().sessions[tabId]?.isMergedView ??
+        false;
       const next = typeof updater === "function" ? updater(prev) : updater;
       updateSession(tabId, { isMergedView: next });
     },
@@ -121,7 +127,6 @@ export const DataTable: React.FC<DataTableProps> = ({
   const canMerge = Boolean(mergeConfig && mergeConfig.mode !== "none");
   const effectiveMergedView = canMerge && isMergedView;
   const effectiveReadOnly = isReadOnly || effectiveMergedView;
-
 
   // Editing state for cells and column headers
   const [editingCell, setEditingCell] = useState<{
@@ -269,18 +274,21 @@ export const DataTable: React.FC<DataTableProps> = ({
   }, [effectiveMergedView, mergeConfig, paginatedRows, columns]);
 
   // Handle column header click for sorting
-  const handleSort = useCallback((column: string) => {
-    // If currently renaming this column, don't sort
-    setSortState((prev) => {
-      if (prev.column !== column) {
-        return { column, direction: "asc" };
-      }
-      if (prev.direction === "asc") {
-        return { column, direction: "desc" };
-      }
-      return { column: null, direction: null };
-    });
-  }, [setSortState]);
+  const handleSort = useCallback(
+    (column: string) => {
+      // If currently renaming this column, don't sort
+      setSortState((prev) => {
+        if (prev.column !== column) {
+          return { column, direction: "asc" };
+        }
+        if (prev.direction === "asc") {
+          return { column, direction: "desc" };
+        }
+        return { column: null, direction: null };
+      });
+    },
+    [setSortState],
+  );
 
   // Commit cell changes
   const handleCommitCell = useCallback(() => {
@@ -377,11 +385,20 @@ export const DataTable: React.FC<DataTableProps> = ({
         if (typeof analyzed.raw === "boolean") {
           return (
             <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+              style={
                 analyzed.raw
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-              }`}
+                  ? {
+                      backgroundColor: "var(--status-success-bg)",
+                      borderColor: "var(--status-success-border)",
+                      color: "var(--status-success-text)",
+                    }
+                  : {
+                      backgroundColor: "var(--status-danger-bg)",
+                      borderColor: "var(--status-danger-border)",
+                      color: "var(--status-danger-text)",
+                    }
+              }
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold border"
             >
               {analyzed.raw ? "true" : "false"}
             </span>
@@ -389,7 +406,10 @@ export const DataTable: React.FC<DataTableProps> = ({
         }
         if (typeof analyzed.raw === "number") {
           return (
-            <span className="font-mono text-xs text-amber-600 dark:text-amber-400">
+            <span
+              className="font-mono text-xs"
+              style={{ color: "var(--status-warning-text)" }}
+            >
               {analyzed.displayText}
             </span>
           );
@@ -656,7 +676,10 @@ export const DataTable: React.FC<DataTableProps> = ({
 
       {/* Pagination Footer */}
       {totalRows > 0 && (
-        <div data-no-print="true" className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]">
+        <div
+          data-no-print="true"
+          className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-surface)] shrink-0 select-none text-xs text-[var(--text-muted)]"
+        >
           {/* Row count summary & Merged View toggle */}
           <div className="flex items-center gap-2">
             <span>
@@ -813,7 +836,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                     setContextMenu(null);
                     onDeleteColumn(col);
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 text-left transition-colors"
+                  style={{ color: "var(--status-danger-text)" }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-[var(--status-danger-bg)] text-left transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete Column</span>
@@ -830,7 +854,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                   setContextMenu(null);
                   onDeleteRow?.(idx);
                 }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 text-left transition-colors"
+                style={{ color: "var(--status-danger-text)" }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-[var(--status-danger-bg)] text-left transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete Row #{contextMenu.targetRowIndex + 1}</span>

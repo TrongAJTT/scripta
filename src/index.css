@@ -5,6 +5,7 @@
   /* Fonts */
   --font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Times New Roman', Times, 'Lora', 'Merriweather', 'Noto Serif', Georgia, serif;
 
   /* Surfaces & Backgrounds */
   --color-app: var(--bg-app);
@@ -78,6 +79,23 @@
     /* High contrast text on accent background (Dark on light pastel green) */
     --text-on-accent: #111827;
 
+    /* Semantic Status Tokens (Dark) */
+    --status-info-bg: rgba(137, 180, 250, 0.12);
+    --status-info-border: rgba(137, 180, 250, 0.28);
+    --status-info-text: #89b4fa;
+
+    --status-success-bg: rgba(166, 227, 161, 0.12);
+    --status-success-border: rgba(166, 227, 161, 0.28);
+    --status-success-text: #a6e3a1;
+
+    --status-warning-bg: rgba(249, 226, 175, 0.12);
+    --status-warning-border: rgba(249, 226, 175, 0.3);
+    --status-warning-text: #f9e2af;
+
+    --status-danger-bg: rgba(243, 139, 168, 0.12);
+    --status-danger-border: rgba(243, 139, 168, 0.3);
+    --status-danger-text: #f38ba8;
+
     --scrollbar-thumb: #45475a;
     --scrollbar-track: #181825;
   }
@@ -112,6 +130,23 @@
 
     /* High contrast text on accent background (White on deeper green) */
     --text-on-accent: #ffffff;
+
+    /* Semantic Status Tokens (Light) */
+    --status-info-bg: rgba(30, 102, 245, 0.08);
+    --status-info-border: rgba(30, 102, 245, 0.25);
+    --status-info-text: #1e66f5;
+
+    --status-success-bg: rgba(64, 160, 43, 0.08);
+    --status-success-border: rgba(64, 160, 43, 0.25);
+    --status-success-text: #2e7d1e;
+
+    --status-warning-bg: rgba(223, 142, 29, 0.1);
+    --status-warning-border: rgba(223, 142, 29, 0.3);
+    --status-warning-text: #b4690e;
+
+    --status-danger-bg: rgba(210, 15, 57, 0.08);
+    --status-danger-border: rgba(210, 15, 57, 0.25);
+    --status-danger-text: #d20f39;
 
     --scrollbar-thumb: #bcc0cc;
     --scrollbar-track: #eff1f5;
@@ -288,6 +323,11 @@
 
   .toolbar-btn:active {
     transform: scale(0.95);
+  }
+
+  .bg-canvas-dots {
+    background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+    background-size: 16px 16px;
   }
 }
 
@@ -527,6 +567,34 @@
 
 .markdown-preview a:hover {
   color: var(--accent);
+}
+
+/* LaTeX Academic Paper Preview */
+.latex-preview-content {
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+
+.latex-preview-content h1,
+.latex-preview-content h2,
+.latex-preview-content h3,
+.latex-preview-content h4 {
+  font-family: var(--font-serif);
+}
+
+.latex-preview-content p {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+
+.latex-preview-content .katex {
+  font-size: 1.08em;
+}
+
+.latex-preview-content .latex-math-block {
+  margin: 1.25rem 0;
+  padding: 0.5rem 0;
 }
 
 /* CodeMirror Bookmark Gutter */

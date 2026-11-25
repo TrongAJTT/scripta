@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import mermaid from "mermaid";
 import {
   Moon,
   Sun,
@@ -151,7 +150,7 @@ export const PreviewTab: React.FC = () => {
     async function renderSampleDiagram() {
       setRenderError(null);
       try {
-        applyMermaidTheme(currentMermaidTheme, appTheme);
+        const mermaid = await applyMermaidTheme(currentMermaidTheme, appTheme);
         const uniqueId = `mermaid-pref-preview-${currentSeq}`;
         const { svg } = await mermaid.render(uniqueId, SAMPLE_MERMAID);
         if (!isCancelled && currentSeq === renderSeqRef.current) {
@@ -198,7 +197,10 @@ export const PreviewTab: React.FC = () => {
         {/* Live Preview Box */}
         <div className="mt-3 p-4 rounded-md border border-[var(--border-color)] bg-[var(--bg-editor)] flex items-center justify-center min-h-[160px] overflow-hidden transition-colors shadow-inner">
           {renderError ? (
-            <div className="text-xs text-red-400 p-2 text-center">
+            <div
+              className="text-xs p-2 text-center"
+              style={{ color: "var(--status-danger-text)" }}
+            >
               {renderError}
             </div>
           ) : previewSvg ? (
