@@ -15,29 +15,65 @@ import { Z_INDEX } from "../../core/constants/zIndex";
 const getVariantIcon = (variant: DialogVariant = "info") => {
   switch (variant) {
     case "danger":
-      return <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />;
+      return (
+        <AlertCircle
+          className="w-5 h-5 shrink-0"
+          style={{ color: "var(--status-danger-text)" }}
+        />
+      );
     case "warning":
-      return <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />;
+      return (
+        <AlertTriangle
+          className="w-5 h-5 shrink-0"
+          style={{ color: "var(--status-warning-text)" }}
+        />
+      );
     case "success":
-      return <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />;
+      return (
+        <CheckCircle2
+          className="w-5 h-5 shrink-0"
+          style={{ color: "var(--status-success-text)" }}
+        />
+      );
     case "info":
     default:
       return <Info className="w-5 h-5 text-[var(--accent)] shrink-0" />;
   }
 };
 
-const getConfirmButtonClasses = (variant: DialogVariant = "info") => {
+const getConfirmButtonStyle = (
+  variant: DialogVariant = "info",
+): React.CSSProperties | undefined => {
   switch (variant) {
     case "danger":
-      return "bg-red-600 hover:bg-red-700 text-white focus:ring-2 focus:ring-red-500 focus:outline-hidden";
+      return {
+        backgroundColor: "var(--status-danger-bg)",
+        borderColor: "var(--status-danger-border)",
+        color: "var(--status-danger-text)",
+      };
     case "warning":
-      return "bg-amber-600 hover:bg-amber-700 text-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden";
+      return {
+        backgroundColor: "var(--status-warning-bg)",
+        borderColor: "var(--status-warning-border)",
+        color: "var(--status-warning-text)",
+      };
     case "success":
-      return "bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden";
+      return {
+        backgroundColor: "var(--status-success-bg)",
+        borderColor: "var(--status-success-border)",
+        color: "var(--status-success-text)",
+      };
     case "info":
     default:
-      return "bg-accent text-accent-contrast hover:opacity-90 focus:ring-2 focus:ring-[var(--accent)] focus:outline-hidden";
+      return undefined;
   }
+};
+
+const getConfirmButtonClasses = (variant: DialogVariant = "info") => {
+  if (variant === "info") {
+    return "bg-accent text-accent-contrast hover:opacity-90 focus:ring-2 focus:ring-[var(--accent)] focus:outline-hidden";
+  }
+  return "border hover:brightness-110 focus:ring-2 focus:ring-[var(--border-active)] focus:outline-hidden";
 };
 
 const DialogContent: React.FC<{ dialog: NonNullable<DialogState> }> = ({
@@ -249,7 +285,10 @@ const DialogContent: React.FC<{ dialog: NonNullable<DialogState> }> = ({
               </div>
               <div className="flex items-center justify-between text-[11px]">
                 {validationError ? (
-                  <span className="text-red-400 font-medium">
+                  <span
+                    className="font-medium"
+                    style={{ color: "var(--status-danger-text)" }}
+                  >
                     {validationError}
                   </span>
                 ) : (
@@ -293,6 +332,7 @@ const DialogContent: React.FC<{ dialog: NonNullable<DialogState> }> = ({
             <button
               ref={confirmBtnRef}
               onClick={handleConfirm}
+              style={getConfirmButtonStyle(variant)}
               className={`px-4 py-1.5 text-xs font-semibold rounded transition-all shadow-xs cursor-pointer ${getConfirmButtonClasses(
                 variant,
               )}`}

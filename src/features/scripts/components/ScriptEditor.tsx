@@ -1767,13 +1767,15 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                       }}
                     >
                       <Code2
-                        className={`w-4 h-4 shrink-0 ${isOrphaned ? "text-red-400" : "text-[var(--accent)]"}`}
+                        className={`w-4 h-4 shrink-0 ${isOrphaned ? "text-[var(--status-danger-text)]" : "text-[var(--accent)]"}`}
                       />
                       <span
                         style={{
                           fontSize: "13px",
                           fontWeight: 600,
-                          color: isOrphaned ? "#ef4444" : "var(--accent)",
+                          color: isOrphaned
+                            ? "var(--status-danger-text)"
+                            : "var(--accent)",
                           fontFamily: "var(--font-mono, monospace)",
                         }}
                       >

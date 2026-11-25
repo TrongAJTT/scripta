@@ -74,7 +74,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
           tab.isLocked ? (
             <Unlock className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
           ) : (
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <Lock className="w-3.5 h-3.5 text-[var(--status-warning-text)]" />
           )
         }
         onSelect={() => toggleLockTab(tab.id)}
@@ -163,7 +163,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       {/* 9. Close All */}
       <ContextMenu.Item
         label="Close All"
-        icon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
+        icon={<Trash2 className="w-3.5 h-3.5 text-[var(--status-danger-text)]" />}
         danger
         onSelect={() => void closeAllTabsWithPrompt()}
       />

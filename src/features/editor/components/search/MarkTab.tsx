@@ -63,7 +63,7 @@ export const MarkTab: React.FC<MarkTabProps> = ({
             onClick={onClearMarks}
             className="w-full px-3 py-1 rounded-sm bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
-            <Eraser className="w-3.5 h-3.5 text-rose-400" />
+            <Eraser className="w-3.5 h-3.5 text-[var(--status-danger-text)]" />
             <span>Clear All Marks</span>
           </button>
 

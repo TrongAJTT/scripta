@@ -111,17 +111,38 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 Connecting to server...
               </span>
             ) : result?.hasUpdate ? (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold flex items-center gap-1">
+              <span
+                style={{
+                  backgroundColor: "var(--status-success-bg)",
+                  borderColor: "var(--status-success-border)",
+                  color: "var(--status-success-text)",
+                }}
+                className="text-xs px-2 py-0.5 rounded-full border font-semibold flex items-center gap-1"
+              >
                 <Sparkles className="w-3 h-3" />
                 New Update Available!
               </span>
             ) : result?.error ? (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-medium flex items-center gap-1">
+              <span
+                style={{
+                  backgroundColor: "var(--status-warning-bg)",
+                  borderColor: "var(--status-warning-border)",
+                  color: "var(--status-warning-text)",
+                }}
+                className="text-xs px-2 py-0.5 rounded-full border font-medium flex items-center gap-1"
+              >
                 <AlertTriangle className="w-3 h-3" />
                 Offline / Server Unreachable
               </span>
             ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-medium flex items-center gap-1">
+              <span
+                style={{
+                  backgroundColor: "var(--status-info-bg)",
+                  borderColor: "var(--status-info-border)",
+                  color: "var(--status-info-text)",
+                }}
+                className="text-xs px-2 py-0.5 rounded-full border font-medium flex items-center gap-1"
+              >
                 <CheckCircle2 className="w-3 h-3" />
                 Up to Date
               </span>

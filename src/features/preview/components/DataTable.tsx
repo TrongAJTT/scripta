@@ -385,11 +385,20 @@ export const DataTable: React.FC<DataTableProps> = ({
         if (typeof analyzed.raw === "boolean") {
           return (
             <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+              style={
                 analyzed.raw
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-              }`}
+                  ? {
+                      backgroundColor: "var(--status-success-bg)",
+                      borderColor: "var(--status-success-border)",
+                      color: "var(--status-success-text)",
+                    }
+                  : {
+                      backgroundColor: "var(--status-danger-bg)",
+                      borderColor: "var(--status-danger-border)",
+                      color: "var(--status-danger-text)",
+                    }
+              }
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold border"
             >
               {analyzed.raw ? "true" : "false"}
             </span>
@@ -397,7 +406,10 @@ export const DataTable: React.FC<DataTableProps> = ({
         }
         if (typeof analyzed.raw === "number") {
           return (
-            <span className="font-mono text-xs text-amber-600 dark:text-amber-400">
+            <span
+              className="font-mono text-xs"
+              style={{ color: "var(--status-warning-text)" }}
+            >
               {analyzed.displayText}
             </span>
           );
@@ -824,7 +836,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                     setContextMenu(null);
                     onDeleteColumn(col);
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 text-left transition-colors"
+                  style={{ color: "var(--status-danger-text)" }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-[var(--status-danger-bg)] text-left transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete Column</span>
@@ -841,7 +854,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                   setContextMenu(null);
                   onDeleteRow?.(idx);
                 }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 text-left transition-colors"
+                style={{ color: "var(--status-danger-text)" }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-[var(--status-danger-bg)] text-left transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete Row #{contextMenu.targetRowIndex + 1}</span>

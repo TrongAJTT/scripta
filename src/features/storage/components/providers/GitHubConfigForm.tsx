@@ -75,7 +75,12 @@ export const GitHubConfigForm: React.FC<GitHubConfigFormProps> = ({
           <div className="flex items-start gap-1.5 text-[11px] text-[var(--text-muted)]">
             <span
               title="Read, write & commit workspace files"
-              className="font-mono text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-semibold shrink-0"
+              style={{
+                backgroundColor: "var(--status-success-bg)",
+                borderColor: "var(--status-success-border)",
+                color: "var(--status-success-text)",
+              }}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border font-semibold shrink-0"
             >
               Contents: Read and write
             </span>
@@ -83,7 +88,12 @@ export const GitHubConfigForm: React.FC<GitHubConfigFormProps> = ({
           <div className="flex items-start gap-1.5 text-[11px] text-[var(--text-muted)]">
             <span
               title="Verify repository metadata & user access"
-              className="font-mono text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 font-semibold shrink-0"
+              style={{
+                backgroundColor: "var(--status-info-bg)",
+                borderColor: "var(--status-info-border)",
+                color: "var(--status-info-text)",
+              }}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border font-semibold shrink-0"
             >
               Metadata: Read-only
             </span>
@@ -151,7 +161,10 @@ export const GitHubConfigForm: React.FC<GitHubConfigFormProps> = ({
 
         {isGitHubConnected && githubAuth && (
           <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-app)] border border-[var(--border-subtle)]">
-            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
+            <span
+              className="text-xs font-medium flex items-center gap-1.5"
+              style={{ color: "var(--status-success-text)" }}
+            >
               <CheckCircle className="w-3.5 h-3.5" />
               Connected to {githubAuth.owner}/{githubAuth.repo} (
               {githubAuth.branch || "main"})
@@ -159,7 +172,8 @@ export const GitHubConfigForm: React.FC<GitHubConfigFormProps> = ({
             <button
               type="button"
               onClick={onDisconnect}
-              className="text-xs text-rose-400 hover:underline cursor-pointer"
+              style={{ color: "var(--status-danger-text)" }}
+              className="text-xs hover:underline cursor-pointer"
             >
               Disconnect
             </button>
@@ -171,7 +185,7 @@ export const GitHubConfigForm: React.FC<GitHubConfigFormProps> = ({
         <button
           type="submit"
           disabled={isSavingGitHub}
-          className="w-full py-2.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-black rounded-lg text-xs font-semibold transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          className="w-full py-2.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-[var(--text-on-accent)] rounded text-xs font-semibold transition-opacity flex items-center justify-center gap-2 cursor-pointer"
         >
           {isSavingGitHub ? (
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />

@@ -38,13 +38,34 @@ export const DropboxConfigView: React.FC<DropboxConfigViewProps> = ({
             </code>
           </div>
           <div className="flex flex-wrap gap-1.5 pt-1">
-            <span className="font-mono text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+            <span
+              style={{
+                backgroundColor: "var(--status-info-bg)",
+                borderColor: "var(--status-info-border)",
+                color: "var(--status-info-text)",
+              }}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border"
+            >
               files.metadata.read
             </span>
-            <span className="font-mono text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+            <span
+              style={{
+                backgroundColor: "var(--status-success-bg)",
+                borderColor: "var(--status-success-border)",
+                color: "var(--status-success-text)",
+              }}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border"
+            >
               files.content.read
             </span>
-            <span className="font-mono text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+            <span
+              style={{
+                backgroundColor: "var(--status-success-bg)",
+                borderColor: "var(--status-success-border)",
+                color: "var(--status-success-text)",
+              }}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border"
+            >
               files.content.write
             </span>
           </div>
@@ -54,14 +75,21 @@ export const DropboxConfigView: React.FC<DropboxConfigViewProps> = ({
       {/* Connection Action */}
       {isDropboxConnected ? (
         <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-app)] border border-[var(--border-subtle)]">
-          <div className="text-xs text-emerald-400 flex items-center gap-2 font-medium">
+          <div
+            className="text-xs flex items-center gap-2 font-medium"
+            style={{ color: "var(--status-success-text)" }}
+          >
             <CheckCircle className="w-4 h-4 shrink-0" />
             <span>Connected to personal Dropbox account</span>
           </div>
           <button
             type="button"
             onClick={onDisconnect}
-            className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+            style={{
+              backgroundColor: "var(--status-danger-bg)",
+              color: "var(--status-danger-text)",
+            }}
+            className="px-3 py-1.5 hover:brightness-110 text-xs font-medium rounded transition-all cursor-pointer"
           >
             Disconnect
           </button>
@@ -70,7 +98,7 @@ export const DropboxConfigView: React.FC<DropboxConfigViewProps> = ({
         <button
           type="button"
           onClick={onConnect}
-          className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          className="w-full py-2.5 bg-[var(--accent-blue)] hover:brightness-110 text-[var(--text-on-accent)] rounded text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <ExternalLink className="w-4 h-4" />
           Authenticate with Dropbox (OAuth PKCE)

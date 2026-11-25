@@ -31,7 +31,10 @@ export const PreviewThresholdFallback: React.FC<
     <div className="h-full w-full flex items-center justify-center select-none overflow-y-auto">
       <div className="max-w-md w-full flex flex-col items-center text-center animate-fade-in">
         {/* Warning Icon Badge */}
-        <div className="w-12 h-12 flex items-center justify-center text-amber-500 mb-2 shrink-0">
+        <div
+          className="w-12 h-12 flex items-center justify-center mb-2 shrink-0"
+          style={{ color: "var(--status-warning-text)" }}
+        >
           <ShieldAlert className="w-7 h-7 stroke-[1.75]" />
         </div>
 
@@ -48,9 +51,18 @@ export const PreviewThresholdFallback: React.FC<
         <div className="w-full grid grid-cols-2 gap-2.5 mb-5 text-left">
           {/* Line Count Stat */}
           <div
+            style={
+              isLinesExceeded
+                ? {
+                    backgroundColor: "var(--status-warning-bg)",
+                    borderColor: "var(--status-warning-border)",
+                    color: "var(--status-warning-text)",
+                  }
+                : undefined
+            }
             className={`p-3 rounded-lg border text-xs flex flex-col justify-between transition-colors ${
               isLinesExceeded
-                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                ? ""
                 : "bg-[var(--bg-editor)] border-[var(--border-subtle)] text-[var(--text-muted)]"
             }`}
           >
@@ -73,9 +85,18 @@ export const PreviewThresholdFallback: React.FC<
 
           {/* Byte Size Stat */}
           <div
+            style={
+              isBytesExceeded
+                ? {
+                    backgroundColor: "var(--status-warning-bg)",
+                    borderColor: "var(--status-warning-border)",
+                    color: "var(--status-warning-text)",
+                  }
+                : undefined
+            }
             className={`p-3 rounded-lg border text-xs flex flex-col justify-between transition-colors ${
               isBytesExceeded
-                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                ? ""
                 : "bg-[var(--bg-editor)] border-[var(--border-subtle)] text-[var(--text-muted)]"
             }`}
           >
