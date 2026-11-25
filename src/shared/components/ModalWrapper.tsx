@@ -15,6 +15,7 @@ export interface ModalWrapperProps {
   children: React.ReactNode;
   maxWidthClass?: string; // default 'max-w-3xl'
   containerHeightClass?: string; // default MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES
+  zIndex?: number;
 }
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({
@@ -29,6 +30,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   children,
   maxWidthClass = "max-w-3xl",
   containerHeightClass = MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES,
+  zIndex = Z_INDEX.MODAL_BASE,
 }) => {
   // Close on Escape
   useEffect(() => {
@@ -46,7 +48,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
 
   return (
     <div
-      style={{ zIndex: Z_INDEX.MODAL_BASE }}
+      style={{ zIndex }}
       className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-xs animate-fade-in p-3 md:p-6"
     >
       {/* Backdrop click handler */}

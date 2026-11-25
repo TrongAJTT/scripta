@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  X,
   FileText,
   Code2,
   Globe,
@@ -16,7 +15,7 @@ import {
 } from "lucide-react";
 import type { FileTab } from "../../../core/types/file.types";
 import { formatDateTime } from "../../../core/utils/dateUtils";
-import { Z_INDEX } from "../../../core/constants/zIndex";
+import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 
 export interface TabInfoModalProps {
   isOpen: boolean;
@@ -70,40 +69,33 @@ export const TabInfoModal: React.FC<TabInfoModalProps> = ({
   if (tab.isModified) statusBadges.push("Modified");
 
   return (
-    <div
-      style={{ zIndex: Z_INDEX.MODAL_BASE }}
-      className="fixed inset-0 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-md bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
-          <div className="flex items-center gap-2 min-w-0">
-            {isImage ? (
-              <ImageIcon className="w-4 h-4 text-[var(--accent-purple)] shrink-0" />
-            ) : (
-              <FileText className="w-4 h-4 text-[var(--accent)] shrink-0" />
-            )}
-            <h2 className="text-sm font-semibold text-[var(--text-highlight)] truncate">
-              {tab.name}
-            </h2>
-          </div>
+    <ModalWrapper
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidthClass="max-w-md"
+      containerHeightClass="h-auto max-h-[85vh]"
+      icon={
+        isImage ? (
+          <ImageIcon className="w-4 h-4 text-[var(--accent-purple)]" />
+        ) : (
+          <FileText className="w-4 h-4 text-[var(--accent)]" />
+        )
+      }
+      title={tab.name}
+      footer={
+        <div className="flex justify-end w-full">
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 ml-2 shrink-0 rounded hover:bg-[var(--bg-tab-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+            className="px-4 py-1.5 text-xs rounded hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-[var(--text-main)] transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            Close
           </button>
         </div>
-
-        {/* Info Rows */}
-        <div className="px-5 max-h-[65vh] overflow-y-auto">
+      }
+    >
+      {/* Info Rows */}
+      <div className="px-5">
           {/* File Path */}
           <InfoRow
             icon={<HardDrive className="w-3.5 h-3.5" />}
@@ -263,17 +255,6 @@ export const TabInfoModal: React.FC<TabInfoModalProps> = ({
             }
           />
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-end px-5 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-app)]">
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 text-xs rounded-lg hover:bg-[var(--bg-tab-hover)] text-[var(--text-muted)] transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalWrapper>
   );
 };

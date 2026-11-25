@@ -22,7 +22,7 @@ import { workspaceFolderService } from "../services/workspaceFolderService";
 import { dialog } from "../../../shared/dialog/dialogStore";
 import type { WorkspaceSession } from "../../../core/types/workspace.types";
 import { formatDateTime } from "../../../core/utils/dateUtils";
-import { Z_INDEX } from "../../../core/constants/zIndex";
+import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 
 export interface WorkspaceInfoModalProps {
   isOpen: boolean;
@@ -151,36 +151,66 @@ const WorkspaceInfoContent: React.FC<WorkspaceInfoContentProps> = ({
   };
 
   return (
-    <div
-      style={{ zIndex: Z_INDEX.MODAL_BASE }}
-      className="fixed inset-0 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-lg bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-highlight)]">
-              Workspace Information
-            </h2>
-          </div>
+    <ModalWrapper
+      isOpen={true}
+      onClose={onClose}
+      maxWidthClass="max-w-lg"
+      containerHeightClass="h-auto max-h-[85vh]"
+      icon={<Layers className="w-4 h-4" />}
+      title="Workspace Information"
+      footer={
+        <div className="flex items-center gap-2 w-full">
           <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[var(--bg-tab-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+            type="button"
+            onClick={() => void handleSaveToFolder()}
+            disabled={isSavingFolder}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-[var(--accent)] text-[var(--text-on-accent)] hover:opacity-90 transition-opacity font-medium disabled:opacity-50 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            {isSavingFolder ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : isLinked ? (
+              <Save className="w-3.5 h-3.5" />
+            ) : isFSASupported ? (
+              <FolderDown className="w-3.5 h-3.5" />
+            ) : (
+              <HardDrive className="w-3.5 h-3.5" />
+            )}
+            {isLinked
+              ? "Save to Folder"
+              : isFSASupported
+                ? "Save as Folder..."
+                : "Download as ZIP"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenCloudSync();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-[var(--border-color)] hover:bg-[var(--bg-tab-hover)] text-[var(--text-main)] transition-colors cursor-pointer"
+          >
+            {workspace.lastSyncedAt ? (
+              <Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+            ) : (
+              <CloudOff className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            )}
+            Cloud Sync...
+          </button>
+
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3.5 py-1.5 text-xs rounded border border-[var(--border-color)] hover:bg-[var(--bg-tab-hover)] text-[var(--text-main)] transition-colors cursor-pointer"
+          >
+            Close
           </button>
         </div>
-
-        {/* Body */}
-        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+      }
+    >
+      {/* Body */}
+      <div className="p-5 space-y-4">
           {/* Name */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-muted)]">
@@ -362,9 +392,15 @@ const WorkspaceInfoContent: React.FC<WorkspaceInfoContentProps> = ({
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => void handleUnlinkFolder()}
                     disabled={isUnlinking}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-lg hover:bg-red-500/10 text-red-400 border border-red-500/20 transition-colors shrink-0"
+                    style={{
+                      backgroundColor: "var(--status-danger-bg)",
+                      borderColor: "var(--status-danger-border)",
+                      color: "var(--status-danger-text)",
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] rounded border hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
                     title="Unlink folder"
                   >
                     {isUnlinking ? (
@@ -436,54 +472,6 @@ const WorkspaceInfoContent: React.FC<WorkspaceInfoContentProps> = ({
             )}
           </div>
         </div>
-
-        {/* Footer Actions */}
-        <div className="flex items-center gap-2 px-5 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-app)]">
-          <button
-            onClick={() => void handleSaveToFolder()}
-            disabled={isSavingFolder}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-[var(--bg-app)] hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
-          >
-            {isSavingFolder ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : isLinked ? (
-              <Save className="w-3.5 h-3.5" />
-            ) : isFSASupported ? (
-              <FolderDown className="w-3.5 h-3.5" />
-            ) : (
-              <HardDrive className="w-3.5 h-3.5" />
-            )}
-            {isLinked
-              ? "Save to Folder"
-              : isFSASupported
-                ? "Save as Folder..."
-                : "Download as ZIP"}
-          </button>
-
-          <button
-            onClick={() => {
-              onClose();
-              onOpenCloudSync();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-[var(--border-color)] hover:bg-[var(--bg-tab-hover)] text-[var(--text-main)] transition-colors"
-          >
-            {workspace.lastSyncedAt ? (
-              <Cloud className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
-            ) : (
-              <CloudOff className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            )}
-            Cloud Sync...
-          </button>
-
-          <div className="flex-1" />
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs rounded-lg hover:bg-[var(--bg-tab-hover)] text-[var(--text-muted)] transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalWrapper>
   );
 };

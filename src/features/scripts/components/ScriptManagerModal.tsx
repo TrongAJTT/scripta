@@ -6,8 +6,7 @@ import { FunctionCard } from "./FunctionCard";
 import { ScriptEditor } from "./ScriptEditor";
 import { FunctionEditor } from "./FunctionEditor";
 import { AddTemplateModal } from "./AddTemplateModal";
-import { MODAL_LAYOUT } from "../../../shared/constants/modal";
-import { Z_INDEX } from "../../../core/constants/zIndex";
+import { ModalWrapper } from "../../../shared/components/ModalWrapper";
 import { dialog } from "../../../shared/dialog/dialogStore";
 import {
   SearchableFilterDropdown,
@@ -299,176 +298,79 @@ export const ScriptManagerModal: React.FC<ScriptManagerModalProps> = ({
 
   return (
     <>
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.55)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: Z_INDEX.MODAL_BASE,
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <div
-          className={`w-[920px] max-w-[95vw] ${MODAL_LAYOUT.CONTAINER_HEIGHT_CLASSES} bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg shadow-2xl flex flex-col overflow-hidden text-[var(--text-main)]`}
-          style={{
-            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.45)",
-          }}
-        >
-          {/* Header */}
-          <div
-            style={{
-              padding: "12px 18px",
-              borderBottom: "1px solid var(--border-color)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: "var(--bg-app)",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>
-                {editingScript
-                  ? editingScript === "new"
-                    ? "New Script"
-                    : `Edit Script: ${editingScript.name}`
-                  : editingFunction
-                    ? editingFunction === "new"
-                      ? "New Helper Function"
-                      : `Edit Function: ${editingFunction.name}`
-                    : "Script Manager"}
-              </h3>
-
-              {!editingScript && !editingFunction && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "4px",
-                    backgroundColor: "var(--bg-editor)",
-                    padding: "2px",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("scripts")}
-                    style={{
-                      padding: "3px 12px",
-                      fontSize: "12px",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      backgroundColor:
-                        activeTab === "scripts"
-                          ? "var(--accent)"
-                          : "transparent",
-                      color:
-                        activeTab === "scripts"
-                          ? "var(--text-on-accent)"
-                          : "var(--text-muted)",
-                      fontWeight: activeTab === "scripts" ? 600 : 400,
-                    }}
-                  >
-                    Scripts ({scripts.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("functions")}
-                    style={{
-                      padding: "3px 12px",
-                      fontSize: "12px",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      backgroundColor:
-                        activeTab === "functions"
-                          ? "var(--accent)"
-                          : "transparent",
-                      color:
-                        activeTab === "functions"
-                          ? "var(--text-on-accent)"
-                          : "var(--text-muted)",
-                      fontWeight: activeTab === "functions" ? 600 : 400,
-                    }}
-                  >
-                    Functions ({functions.length})
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {!editingScript && !editingFunction && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      padding: "4px 10px",
-                      fontSize: "11px",
-                      cursor: "pointer",
-                      backgroundColor: "var(--bg-surface)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-main)",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    Import JSON
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImportFile}
-                    accept=".json"
-                    style={{ display: "none" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    style={{
-                      padding: "4px 10px",
-                      fontSize: "11px",
-                      cursor: "pointer",
-                      backgroundColor: "var(--bg-surface)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-main)",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    Export JSON
-                  </button>
-                </>
-              )}
+      <ModalWrapper
+        isOpen={isOpen}
+        onClose={handleClose}
+        maxWidthClass="max-w-4xl"
+        title={
+          editingScript
+            ? editingScript === "new"
+              ? "New Script"
+              : `Edit Script: ${editingScript.name}`
+            : editingFunction
+              ? editingFunction === "new"
+                ? "New Helper Function"
+                : `Edit Function: ${editingFunction.name}`
+              : "Script Manager"
+        }
+        badge={
+          !editingScript && !editingFunction ? (
+            <div className="flex gap-1 bg-[var(--bg-editor)] p-0.5 rounded border border-[var(--border-subtle)] ml-2">
               <button
                 type="button"
-                onClick={handleClose}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  fontSize: "18px",
-                  padding: "0 4px",
-                }}
+                onClick={() => setActiveTab("scripts")}
+                className={`px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer ${
+                  activeTab === "scripts"
+                    ? "bg-[var(--accent)] text-[var(--text-on-accent)] font-semibold"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                }`}
               >
-                ✕
+                Scripts ({scripts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("functions")}
+                className={`px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer ${
+                  activeTab === "functions"
+                    ? "bg-[var(--accent)] text-[var(--text-on-accent)] font-semibold"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                }`}
+              >
+                Functions ({functions.length})
               </button>
             </div>
-          </div>
-
-          {/* Content Area */}
-          <div
-            style={{
-              flex: 1,
-              overflow: "hidden",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+          ) : undefined
+        }
+        headerTrailing={
+          !editingScript && !editingFunction ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-2.5 py-1 text-[11px] rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-[var(--text-main)] transition-colors cursor-pointer"
+              >
+                Import JSON
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportFile}
+                accept=".json"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={handleExport}
+                className="px-2.5 py-1 text-[11px] rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-tab-hover)] border border-[var(--border-color)] text-[var(--text-main)] transition-colors cursor-pointer"
+              >
+                Export JSON
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        {/* Content Area */}
+        <div className="flex-1 overflow-hidden p-4 flex flex-col min-h-0">
             {editingScript ? (
               <ScriptEditor
                 script={editingScript === "new" ? undefined : editingScript}
@@ -871,8 +773,7 @@ export const ScriptManagerModal: React.FC<ScriptManagerModalProps> = ({
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </ModalWrapper>
 
       {/* Add Built-in Template Modal */}
       <AddTemplateModal
