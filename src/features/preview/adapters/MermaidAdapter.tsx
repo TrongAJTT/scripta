@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import type { PreviewAdapterProps } from './types';
-import mermaid from 'mermaid';
 import { AlertCircle, Copy, Check } from 'lucide-react';
 import { useEditorStore } from '../../tabs/store';
 import { applyMermaidTheme } from '../services/mermaidExportService';
@@ -19,7 +18,7 @@ export const MermaidAdapter: React.FC<PreviewAdapterProps> = ({ tab, setHeaderAc
     async function renderDiagram() {
       setRenderError(null);
       try {
-        applyMermaidTheme(mermaidTheme, appTheme);
+        const mermaid = await applyMermaidTheme(mermaidTheme, appTheme);
         const id = `mermaid-standalone-${Date.now()}`;
         const { svg } = await mermaid.render(id, tab.content || '');
         if (!isCancelled) setSvgContent(svg);

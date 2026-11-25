@@ -5,6 +5,7 @@ import {
   saveFolderHandle,
   loadFolderHandle,
   saveWorkspace,
+  deleteFolderHandle,
 } from "../../../core/utils/idbStorage";
 import { useWorkspaceStore } from "../store/workspaceStore";
 import { useEditorStore } from "../../tabs/store";
@@ -522,10 +523,7 @@ class WorkspaceFolderService {
    * Unlink the folder from a workspace.
    */
   async unlinkFolder(workspaceId: string): Promise<void> {
-    const { deleteFolderHandle: idbDeleteFolderHandle } = await import(
-      "../../../core/utils/idbStorage"
-    );
-    await idbDeleteFolderHandle(workspaceId);
+    await deleteFolderHandle(workspaceId);
 
     const ws = useWorkspaceStore.getState().workspaces.find((w) => w.id === workspaceId);
     if (ws) {

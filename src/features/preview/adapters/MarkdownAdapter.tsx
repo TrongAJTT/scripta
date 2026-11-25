@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import type { PreviewAdapterProps } from "./types";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import mermaid from "mermaid";
 import { AlertCircle } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "../../tabs/store";
@@ -45,49 +44,58 @@ export const MarkdownAdapter: React.FC<PreviewAdapterProps> = ({ tab }) => {
     const mermaidBlocks = containerRef.current.querySelectorAll(
       "pre code.language-mermaid",
     );
+    if (mermaidBlocks.length === 0) return;
 
-    applyMermaidTheme(mermaidTheme, appTheme);
+    let isCancelled = false;
 
-    mermaidBlocks.forEach(async (block, idx) => {
-      try {
-        const code = block.textContent || "";
-        const id = `mermaid-block-${idx}-${Date.now()}`;
-        const { svg } = await mermaid.render(id, code);
-        const parent = block.parentElement;
-        if (parent) {
-          const wrapper = document.createElement("div");
-          wrapper.className =
-            "my-4 relative group rounded-lg border border-[var(--border-color)] bg-[var(--bg-statusbar)] p-4 flex flex-col items-center overflow-x-auto";
+    void applyMermaidTheme(mermaidTheme, appTheme).then((mermaid) => {
+      if (isCancelled) return;
+      mermaidBlocks.forEach(async (block, idx) => {
+        try {
+          const code = block.textContent || "";
+          const id = `mermaid-block-${idx}-${Date.now()}`;
+          const { svg } = await mermaid.render(id, code);
+          if (isCancelled) return;
+          const parent = block.parentElement;
+          if (parent) {
+            const wrapper = document.createElement("div");
+            wrapper.className =
+              "my-4 relative group rounded-lg border border-[var(--border-color)] bg-[var(--bg-statusbar)] p-4 flex flex-col items-center overflow-x-auto";
 
-          // Action button bar for this diagram
-          const toolbar = document.createElement("div");
-          toolbar.className =
-            "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10";
-          wrapper.appendChild(toolbar);
+            // Action button bar for this diagram
+            const toolbar = document.createElement("div");
+            toolbar.className =
+              "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10";
+            wrapper.appendChild(toolbar);
 
-          const diagramContainer = document.createElement("div");
-          diagramContainer.className = "w-full flex justify-center";
-          diagramContainer.innerHTML = svg;
-          wrapper.appendChild(diagramContainer);
+            const diagramContainer = document.createElement("div");
+            diagramContainer.className = "w-full flex justify-center";
+            diagramContainer.innerHTML = svg;
+            wrapper.appendChild(diagramContainer);
 
-          parent.replaceWith(wrapper);
+            parent.replaceWith(wrapper);
 
-          // Mount React ExportMenu inside toolbar
-          const root = createRoot(toolbar);
-          const diagramBaseName = tab.name
-            ? `${tab.name}-diagram-${idx + 1}`
-            : `diagram-${idx + 1}`;
-          root.render(
-            <MermaidExportMenu
-              svgContent={svg}
-              baseFileName={diagramBaseName}
-            />,
-          );
+            // Mount React ExportMenu inside toolbar
+            const root = createRoot(toolbar);
+            const diagramBaseName = tab.name
+              ? `${tab.name}-diagram-${idx + 1}`
+              : `diagram-${idx + 1}`;
+            root.render(
+              <MermaidExportMenu
+                svgContent={svg}
+                baseFileName={diagramBaseName}
+              />,
+            );
+          }
+        } catch {
+          // Fallback to plain code block
         }
-      } catch {
-        // Fallback to plain code block
-      }
+      });
     });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [renderedHtml, mermaidTheme, appTheme, tab.name]);
 
   return (

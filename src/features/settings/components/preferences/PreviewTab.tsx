@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import mermaid from "mermaid";
 import {
   Moon,
   Sun,
@@ -151,7 +150,7 @@ export const PreviewTab: React.FC = () => {
     async function renderSampleDiagram() {
       setRenderError(null);
       try {
-        applyMermaidTheme(currentMermaidTheme, appTheme);
+        const mermaid = await applyMermaidTheme(currentMermaidTheme, appTheme);
         const uniqueId = `mermaid-pref-preview-${currentSeq}`;
         const { svg } = await mermaid.render(uniqueId, SAMPLE_MERMAID);
         if (!isCancelled && currentSeq === renderSeqRef.current) {

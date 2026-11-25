@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { Suspense, useState, useMemo, useRef, useCallback } from "react";
 import type { FileTab } from "../../../core/types/file.types";
 import { getPreviewAdapter } from "../adapters/registry";
 import {
@@ -145,12 +145,20 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ tab }) => {
             onRenderAnyway={() => bypassPreviewThreshold(tab.id)}
           />
         ) : (
-          <AdapterComponent
-            key={`${tab.id}-${tab.previewType}`}
-            tab={tab}
-            setHeaderActions={setHeaderActions}
-            setPrintHandler={handleSetPrintHandler}
-          />
+          <Suspense
+            fallback={
+              <div className="h-full w-full flex items-center justify-center text-xs text-[var(--text-muted)]">
+                Loading preview...
+              </div>
+            }
+          >
+            <AdapterComponent
+              key={`${tab.id}-${tab.previewType}`}
+              tab={tab}
+              setHeaderActions={setHeaderActions}
+              setPrintHandler={handleSetPrintHandler}
+            />
+          </Suspense>
         )}
       </div>
     </div>

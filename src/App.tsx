@@ -1,28 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { Suspense, lazy, useEffect, useState, useRef } from "react";
 import { useEditorStore } from "./features/tabs/store";
 import { MenuBar } from "./app/layout/MenuBar";
 import { Toolbar } from "./features/editor/components/Toolbar";
 import { TabBar } from "./features/tabs/components/TabBar";
-import { MobileTabDrawer } from "./features/tabs/components/MobileTabDrawer";
 import { CodeEditor } from "./features/editor/components/CodeEditor";
 import { PreviewPanel } from "./features/preview/components/PreviewPanel";
 import { StatusBar } from "./features/editor/components/StatusBar";
 import { SplitPane } from "./shared/components/SplitPane";
-import { FindReplaceModal } from "./features/editor/components/FindReplaceModal";
-import { ExternalFileAlertModal } from "./features/editor/components/ExternalFileAlertModal";
-import { ShortcutMapperModal } from "./features/settings/components/ShortcutMapperModal";
-import {
-  PreferencesModal,
-  type SettingsCategory,
-} from "./features/settings/components/PreferencesModal";
-import { ScriptManagerModal } from "./features/scripts/components/ScriptManagerModal";
-import { ScriptRunModal } from "./features/scripts/components/ScriptRunModal";
-import { AppUpdateModal } from "./features/settings/components/AppUpdateModal";
-import { AboutModal } from "./features/settings/components/AboutModal";
-import { InstallAppModal } from "./features/settings/components/InstallAppModal";
-import { CloudSyncModal } from "./features/storage/components/CloudSyncModal";
-import { WorkspaceInfoModal } from "./features/workspace/components/WorkspaceInfoModal";
-import { TabInfoModal } from "./features/tabs/components/TabInfoModal";
+import type { SettingsCategory } from "./features/settings/components/PreferencesModal";
 import { workspaceFolderService } from "./features/workspace/services/workspaceFolderService";
 import { useScriptStore } from "./features/scripts/store/scriptStore";
 import { useWorkspaceStore } from "./features/workspace/store/workspaceStore";
@@ -35,8 +20,6 @@ import {
 import type { ScriptMetadata } from "./features/scripts/types/script.types";
 import type { DroppedFileItem } from "./core/types/file.types";
 import { UploadCloud, FileCode2, FilePlus2, FileText } from "lucide-react";
-import { InsertCharacterModal } from "./features/editor/components/InsertCharacterModal";
-import { GoToModal } from "./features/editor/components/GoToModal";
 import { GlobalDialogHost } from "./shared/dialog/GlobalDialogHost";
 import { dialog } from "./shared/dialog/dialogStore";
 import { useEditorCommands } from "./features/editor/hooks/useEditorCommands";
@@ -44,6 +27,82 @@ import type { CommandId } from "./core/commands/types";
 import { matchesKeybinding } from "./core/commands/registry";
 import { useKeybindingStore } from "./core/commands/keybindingStore";
 import { Z_INDEX } from "./core/constants/zIndex";
+
+const MobileTabDrawer = lazy(() =>
+  import("./features/tabs/components/MobileTabDrawer").then((m) => ({
+    default: m.MobileTabDrawer,
+  })),
+);
+const FindReplaceModal = lazy(() =>
+  import("./features/editor/components/FindReplaceModal").then((m) => ({
+    default: m.FindReplaceModal,
+  })),
+);
+const ExternalFileAlertModal = lazy(() =>
+  import("./features/editor/components/ExternalFileAlertModal").then((m) => ({
+    default: m.ExternalFileAlertModal,
+  })),
+);
+const ShortcutMapperModal = lazy(() =>
+  import("./features/settings/components/ShortcutMapperModal").then((m) => ({
+    default: m.ShortcutMapperModal,
+  })),
+);
+const PreferencesModal = lazy(() =>
+  import("./features/settings/components/PreferencesModal").then((m) => ({
+    default: m.PreferencesModal,
+  })),
+);
+const ScriptManagerModal = lazy(() =>
+  import("./features/scripts/components/ScriptManagerModal").then((m) => ({
+    default: m.ScriptManagerModal,
+  })),
+);
+const ScriptRunModal = lazy(() =>
+  import("./features/scripts/components/ScriptRunModal").then((m) => ({
+    default: m.ScriptRunModal,
+  })),
+);
+const AppUpdateModal = lazy(() =>
+  import("./features/settings/components/AppUpdateModal").then((m) => ({
+    default: m.AppUpdateModal,
+  })),
+);
+const AboutModal = lazy(() =>
+  import("./features/settings/components/AboutModal").then((m) => ({
+    default: m.AboutModal,
+  })),
+);
+const InstallAppModal = lazy(() =>
+  import("./features/settings/components/InstallAppModal").then((m) => ({
+    default: m.InstallAppModal,
+  })),
+);
+const CloudSyncModal = lazy(() =>
+  import("./features/storage/components/CloudSyncModal").then((m) => ({
+    default: m.CloudSyncModal,
+  })),
+);
+const WorkspaceInfoModal = lazy(() =>
+  import("./features/workspace/components/WorkspaceInfoModal").then((m) => ({
+    default: m.WorkspaceInfoModal,
+  })),
+);
+const TabInfoModal = lazy(() =>
+  import("./features/tabs/components/TabInfoModal").then((m) => ({
+    default: m.TabInfoModal,
+  })),
+);
+const InsertCharacterModal = lazy(() =>
+  import("./features/editor/components/InsertCharacterModal").then((m) => ({
+    default: m.InsertCharacterModal,
+  })),
+);
+const GoToModal = lazy(() =>
+  import("./features/editor/components/GoToModal").then((m) => ({
+    default: m.GoToModal,
+  })),
+);
 
 export const App: React.FC = () => {
   const initStore = useEditorStore((s) => s.initStore);
@@ -58,6 +117,11 @@ export const App: React.FC = () => {
   const createTab = useEditorStore((s) => s.createTab);
   const closeTab = useEditorStore((s) => s.closeTab);
   const toggleSearch = useEditorStore((s) => s.toggleSearch);
+  const isSearching = useEditorStore((s) => s.isSearching);
+  const [hasOpenedSearch, setHasOpenedSearch] = useState(false);
+  if (isSearching && !hasOpenedSearch) {
+    setHasOpenedSearch(true);
+  }
   const openDroppedFiles = useEditorStore((s) => s.openDroppedFiles);
   const appendDroppedFilesToActiveTab = useEditorStore(
     (s) => s.appendDroppedFilesToActiveTab,
@@ -597,105 +661,131 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* External File Alert Modal */}
-          <ExternalFileAlertModal
-            alert={externalAlert}
-            onClose={clearExternalAlert}
-            onKeepContent={handleExternalKeepContent}
-            onCloseTab={handleExternalCloseTab}
-            onReloadDisk={handleExternalReloadDisk}
-            onKeepMyChanges={handleExternalKeepMyChanges}
-          />
+          <Suspense fallback={null}>
+            {/* External File Alert Modal */}
+            {externalAlert && (
+              <ExternalFileAlertModal
+                alert={externalAlert}
+                onClose={clearExternalAlert}
+                onKeepContent={handleExternalKeepContent}
+                onCloseTab={handleExternalCloseTab}
+                onReloadDisk={handleExternalReloadDisk}
+                onKeepMyChanges={handleExternalKeepMyChanges}
+              />
+            )}
 
-          {/* Shortcut Mapper Dialog */}
-          <ShortcutMapperModal
-            isOpen={isShortcutMapperOpen}
-            onClose={() => setIsShortcutMapperOpen(false)}
-          />
+            {/* Shortcut Mapper Dialog */}
+            {isShortcutMapperOpen && (
+              <ShortcutMapperModal
+                isOpen={isShortcutMapperOpen}
+                onClose={() => setIsShortcutMapperOpen(false)}
+              />
+            )}
 
-          {/* Preferences Modal */}
-          <PreferencesModal
-            isOpen={isPreferencesOpen}
-            onClose={() => setIsPreferencesOpen(false)}
-            initialCategory={preferencesCategory}
-            onOpenShortcutMapper={() => {
-              setIsPreferencesOpen(false);
-              setIsShortcutMapperOpen(true);
-            }}
-            onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
-          />
+            {/* Preferences Modal */}
+            {isPreferencesOpen && (
+              <PreferencesModal
+                isOpen={isPreferencesOpen}
+                onClose={() => setIsPreferencesOpen(false)}
+                initialCategory={preferencesCategory}
+                onOpenShortcutMapper={() => {
+                  setIsPreferencesOpen(false);
+                  setIsShortcutMapperOpen(true);
+                }}
+                onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+              />
+            )}
 
-          {/* App Update & Cache Control Modal */}
-          <AppUpdateModal
-            isOpen={isUpdateModalOpen}
-            onClose={() => setIsUpdateModalOpen(false)}
-          />
+            {/* App Update & Cache Control Modal */}
+            {isUpdateModalOpen && (
+              <AppUpdateModal
+                isOpen={isUpdateModalOpen}
+                onClose={() => setIsUpdateModalOpen(false)}
+              />
+            )}
 
-          {/* About Application Modal */}
-          <AboutModal
-            isOpen={isAboutOpen}
-            onClose={() => setIsAboutOpen(false)}
-            onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
-          />
+            {/* About Application Modal */}
+            {isAboutOpen && (
+              <AboutModal
+                isOpen={isAboutOpen}
+                onClose={() => setIsAboutOpen(false)}
+                onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+              />
+            )}
 
-          {/* Install App (PWA) Modal */}
-          <InstallAppModal
-            isOpen={isInstallAppOpen}
-            onClose={() => setIsInstallAppOpen(false)}
-          />
+            {/* Install App (PWA) Modal */}
+            {isInstallAppOpen && (
+              <InstallAppModal
+                isOpen={isInstallAppOpen}
+                onClose={() => setIsInstallAppOpen(false)}
+              />
+            )}
 
-          {/* Cloud Sync & Encryption Modal */}
-          <CloudSyncModal
-            isOpen={isCloudSyncOpen}
-            onClose={() => setIsCloudSyncOpen(false)}
-          />
+            {/* Cloud Sync & Encryption Modal */}
+            {isCloudSyncOpen && (
+              <CloudSyncModal
+                isOpen={isCloudSyncOpen}
+                onClose={() => setIsCloudSyncOpen(false)}
+              />
+            )}
 
-          {/* Workspace Information Modal */}
-          <WorkspaceInfoModal
-            isOpen={isWorkspaceInfoOpen}
-            onClose={() => setIsWorkspaceInfoOpen(false)}
-            onOpenCloudSync={() => setIsCloudSyncOpen(true)}
-          />
+            {/* Workspace Information Modal */}
+            {isWorkspaceInfoOpen && (
+              <WorkspaceInfoModal
+                isOpen={isWorkspaceInfoOpen}
+                onClose={() => setIsWorkspaceInfoOpen(false)}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+              />
+            )}
 
-          {/* Tab Information Modal */}
-          <TabInfoModal
-            isOpen={isTabInfoOpen}
-            tab={activeTab ?? null}
-            onClose={() => setIsTabInfoOpen(false)}
-          />
+            {/* Tab Information Modal */}
+            {isTabInfoOpen && (
+              <TabInfoModal
+                isOpen={isTabInfoOpen}
+                tab={activeTab ?? null}
+                onClose={() => setIsTabInfoOpen(false)}
+              />
+            )}
 
-          {/* Script Manager Modal */}
-          <ScriptManagerModal
-            isOpen={isScriptManagerOpen}
-            onClose={() => setIsScriptManagerOpen(false)}
-            onRunScript={(script) => {
-              setIsScriptManagerOpen(false);
-              setRunningScript(script);
-            }}
-          />
+            {/* Script Manager Modal */}
+            {isScriptManagerOpen && (
+              <ScriptManagerModal
+                isOpen={isScriptManagerOpen}
+                onClose={() => setIsScriptManagerOpen(false)}
+                onRunScript={(script) => {
+                  setIsScriptManagerOpen(false);
+                  setRunningScript(script);
+                }}
+              />
+            )}
 
-          {/* Script Run Modal */}
-          {runningScript && (
-            <ScriptRunModal
-              script={runningScript}
-              isOpen={Boolean(runningScript)}
-              onClose={() => setRunningScript(null)}
-            />
-          )}
+            {/* Script Run Modal */}
+            {runningScript && (
+              <ScriptRunModal
+                script={runningScript}
+                isOpen={Boolean(runningScript)}
+                onClose={() => setRunningScript(null)}
+              />
+            )}
 
-          {/* Insert Character Modal */}
-          <InsertCharacterModal
-            isOpen={isInsertCharacterOpen}
-            onClose={() => setIsInsertCharacterOpen(false)}
-            onInsert={(char) => editorCmds.insertText(char)}
-          />
+            {/* Insert Character Modal */}
+            {isInsertCharacterOpen && (
+              <InsertCharacterModal
+                isOpen={isInsertCharacterOpen}
+                onClose={() => setIsInsertCharacterOpen(false)}
+                onInsert={(char) => editorCmds.insertText(char)}
+              />
+            )}
 
-          {/* Go To Line/Offset/Bookmark Modal */}
-          <GoToModal
-            isOpen={isGoToOpen}
-            onClose={() => setIsGoToOpen(false)}
-            editorCmds={editorCmds}
-          />
+            {/* Go To Line/Offset/Bookmark Modal */}
+            {isGoToOpen && (
+              <GoToModal
+                isOpen={isGoToOpen}
+                onClose={() => setIsGoToOpen(false)}
+                editorCmds={editorCmds}
+              />
+            )}
+          </Suspense>
 
           {/* Drag & Drop Dual-Zone Visual Overlay */}
           {isDragOver && (
@@ -800,17 +890,21 @@ export const App: React.FC = () => {
       {/* 5. Status Bar */}
       {settings.showStatusBar && <StatusBar />}
 
-      {/* 6. Find & Replace Floating Draggable Dialog */}
-      <FindReplaceModal />
+      <Suspense fallback={null}>
+        {/* 6. Find & Replace Floating Draggable Dialog */}
+        {hasOpenedSearch && <FindReplaceModal />}
 
-      {/* 7. Global Dialog Host (Imperative Promise-based alert, confirm, prompt) */}
-      <GlobalDialogHost />
+        {/* 7. Global Dialog Host (Imperative Promise-based alert, confirm, prompt) */}
+        <GlobalDialogHost />
 
-      {/* 8. Mobile Tab Drawer (Sliding vertical tab drawer for mobile) */}
-      <MobileTabDrawer
-        isOpen={isMobileTabDrawerOpen}
-        onClose={() => setIsMobileTabDrawerOpen(false)}
-      />
+        {/* 8. Mobile Tab Drawer (Sliding vertical tab drawer for mobile) */}
+        {isMobileTabDrawerOpen && (
+          <MobileTabDrawer
+            isOpen={isMobileTabDrawerOpen}
+            onClose={() => setIsMobileTabDrawerOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };
