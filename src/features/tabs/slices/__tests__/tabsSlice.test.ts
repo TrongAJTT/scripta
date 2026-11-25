@@ -19,6 +19,7 @@ describe("tabsSlice (via useEditorStore)", () => {
   beforeEach(() => {
     useEditorStore.setState({
       tabs: [],
+      tabGroups: [],
       activeTabId: null,
       recentTabIds: [],
       bypassedPreviewTabIds: [],
@@ -114,5 +115,79 @@ describe("tabsSlice (via useEditorStore)", () => {
 
     const remainingNames = useEditorStore.getState().tabs.map((t) => t.name);
     expect(remainingNames).toEqual(["pinned-saved.txt", "modified.txt"]);
+  });
+
+  it("creates, collapses, ungroups, and prunes tab groups", async () => {
+    const store = useEditorStore.getState();
+    store.createTab("one.md", "# 1");
+    store.createTab("two.md", "# 2");
+    const [tab1, tab2] = useEditorStore.getState().tabs;
+
+    const groupId = store.createTabGroup("Docs", "blue", tab1.id);
+    expect(useEditorStore.getState().tabGroups).toHaveLength(1);
+    expect(useEditorStore.getState().tabs[0].groupId).toBe(groupId);
+
+    store.assignTabToGroup(tab2.id, groupId);
+    expect(useEditorStore.getState().tabs[1].groupId).toBe(groupId);
+
+    store.toggleTabGroupCollapse(groupId);
+    expect(useEditorStore.getState().tabGroups[0].collapsed).toBe(true);
+
+    // Pinning a grouped tab removes it from the group
+    store.togglePinTab(tab1.id);
+    expect(useEditorStore.getState().tabs[0].isPinned).toBe(true);
+    expect(useEditorStore.getState().tabs[0].groupId).toBeUndefined();
+    expect(useEditorStore.getState().tabGroups).toHaveLength(1);
+
+    // Closing the last tab in the group prunes the empty group
+    store.closeTab(tab2.id);
+    expect(useEditorStore.getState().tabGroups).toHaveLength(0);
+
+    // New group + ungroup
+    const groupId2 = store.createTabGroup("Notes", "purple");
+    store.createTabInGroup(groupId2);
+    expect(useEditorStore.getState().tabGroups).toHaveLength(1);
+    expect(
+      useEditorStore.getState().tabs.some((t) => t.groupId === groupId2),
+    ).toBe(true);
+
+    store.ungroupTabGroup(groupId2);
+    expect(useEditorStore.getState().tabGroups).toHaveLength(0);
+    expect(
+      useEditorStore.getState().tabs.some((t) => t.groupId === groupId2),
+    ).toBe(false);
+
+    // Close group removes all tabs in that group
+    store.createTab("three.txt", "3");
+    const tab3 = useEditorStore.getState().tabs.find((t) => t.name === "three.txt")!;
+    const groupId3 = store.createTabGroup("Temp", "rose", tab3.id);
+    await store.closeTabGroup(groupId3);
+    expect(useEditorStore.getState().tabGroups).toHaveLength(0);
+    expect(
+      useEditorStore.getState().tabs.some((t) => t.id === tab3.id),
+    ).toBe(false);
+  });
+
+  it("adopts target tab groupId only when landing inside group span", () => {
+    const store = useEditorStore.getState();
+    store.createTab("a.txt", "a");
+    store.createTab("b.txt", "b");
+    store.createTab("c.txt", "c");
+    const [tabA, tabB, tabC] = useEditorStore.getState().tabs;
+
+    const groupId = store.createTabGroup("Work", "emerald", tabB.id);
+    store.assignTabToGroup(tabC.id, groupId);
+
+    // Drag ungrouped tabA (index 0) past outermost tabC (index 2) -> stays ungrouped
+    store.reorderTabs(0, 2);
+    expect(
+      useEditorStore.getState().tabs.find((t) => t.id === tabA.id)?.groupId,
+    ).toBeUndefined();
+
+    // Drag ungrouped tabA (now index 2) back onto tabC (index 1, inside [header..tabC]) -> joins group
+    store.reorderTabs(2, 1);
+    expect(
+      useEditorStore.getState().tabs.find((t) => t.id === tabA.id)?.groupId,
+    ).toBe(groupId);
   });
 });

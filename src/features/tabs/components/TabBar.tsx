@@ -15,9 +15,12 @@ import {
 } from "@dnd-kit/sortable";
 import { Plus, PanelLeft } from "lucide-react";
 import { useEditorStore } from "../store";
-import type { FileTab } from "../../../core/types/file.types";
+import type { FileTab, TabGroup } from "../../../core/types/file.types";
+import { TAB_GROUP_COLOR_MAP } from "../../../core/constants/tabGroups";
 import { dialog } from "../../../shared/dialog/dialogStore";
 import { TabContextMenu } from "./TabContextMenu";
+import { TabGroupChip } from "./TabGroupChip";
+import { TabGroupContextMenu } from "./TabGroupContextMenu";
 import { SortableTabItem } from "./SortableTabItem";
 import { ContextMenu } from "../../../shared/components/ContextMenu";
 import { SampleFilesMenuItems } from "../../editor/components/SampleFilesMenuItems";
@@ -39,11 +42,16 @@ export const TabBar: React.FC<TabBarProps> = ({
   onTabClick,
 }) => {
   const tabs = useEditorStore((s) => s.tabs);
+  const tabGroups = useEditorStore((s) => s.tabGroups);
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const recentTabIds = useEditorStore((s) => s.recentTabIds);
   const setActiveTab = useEditorStore((s) => s.setActiveTab);
   const closeTab = useEditorStore((s) => s.closeTab);
   const togglePinTab = useEditorStore((s) => s.togglePinTab);
+  const toggleTabGroupCollapse = useEditorStore(
+    (s) => s.toggleTabGroupCollapse,
+  );
+  const assignTabToGroup = useEditorStore((s) => s.assignTabToGroup);
   const createTab = useEditorStore((s) => s.createTab);
   const reorderTabs = useEditorStore((s) => s.reorderTabs);
   const tabIconTheme = useEditorStore(
@@ -54,6 +62,13 @@ export const TabBar: React.FC<TabBarProps> = ({
   // Context Menu state
   const [contextMenu, setContextMenu] = useState<{
     tab: FileTab;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Group Context Menu state
+  const [groupContextMenu, setGroupContextMenu] = useState<{
+    group: TabGroup;
     x: number;
     y: number;
   } | null>(null);
@@ -102,6 +117,39 @@ export const TabBar: React.FC<TabBarProps> = ({
   const pinnedTabs = tabs.filter((t) => t.isPinned);
   const unpinnedTabs = tabs.filter((t) => !t.isPinned);
 
+  const groupMap = new Map(tabGroups.map((g) => [g.id, g]));
+  const renderedGroupIds = new Set<string>();
+  const unpinnedBlocks: Array<
+    | { type: "tab"; tab: FileTab }
+    | { type: "group"; group: TabGroup; tabs: FileTab[] }
+  > = [];
+
+  for (const tab of unpinnedTabs) {
+    if (tab.groupId) {
+      const group = groupMap.get(tab.groupId);
+      if (group) {
+        if (!renderedGroupIds.has(group.id)) {
+          renderedGroupIds.add(group.id);
+          unpinnedBlocks.push({
+            type: "group",
+            group,
+            tabs: unpinnedTabs.filter((t) => t.groupId === group.id),
+          });
+        }
+        continue;
+      }
+    }
+    unpinnedBlocks.push({ type: "tab", tab });
+  }
+
+  const visibleUnpinnedTabIds = unpinnedBlocks.flatMap((block) => {
+    if (block.type === "tab") return [block.tab.id];
+    const visibleTabs = block.group.collapsed
+      ? block.tabs.filter((t) => t.id === activeTabId)
+      : block.tabs;
+    return visibleTabs.map((t) => t.id);
+  });
+
   const handleCloseTab = async (tab: FileTab) => {
     if (tab.isModified) {
       const confirmed = await dialog.confirm({
@@ -134,12 +182,22 @@ export const TabBar: React.FC<TabBarProps> = ({
     const { active, over } = event;
     setActiveDragId(null);
 
-    if (over && active.id !== over.id) {
-      const fromIndex = tabs.findIndex((t) => t.id === active.id);
-      const toIndex = tabs.findIndex((t) => t.id === over.id);
-      if (fromIndex !== -1 && toIndex !== -1) {
-        reorderTabs(fromIndex, toIndex);
+    if (!over || active.id === over.id) return;
+
+    const overId = String(over.id);
+    if (overId.startsWith("group-header:")) {
+      const targetGroupId = overId.slice("group-header:".length);
+      const activeTab = tabs.find((t) => t.id === active.id);
+      if (activeTab && !activeTab.isPinned) {
+        assignTabToGroup(activeTab.id, targetGroupId);
       }
+      return;
+    }
+
+    const fromIndex = tabs.findIndex((t) => t.id === active.id);
+    const toIndex = tabs.findIndex((t) => t.id === over.id);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      reorderTabs(fromIndex, toIndex);
     }
   };
 
@@ -229,41 +287,99 @@ export const TabBar: React.FC<TabBarProps> = ({
           />
         )}
 
-        {/* Unpinned Tabs Group */}
+        {/* Unpinned Tabs & Groups */}
         <SortableContext
-          items={unpinnedTabs.map((t) => t.id)}
+          items={visibleUnpinnedTabIds}
           strategy={
             isVertical
               ? verticalListSortingStrategy
               : horizontalListSortingStrategy
           }
         >
-          {unpinnedTabs.map((tab) => {
-            const isActive = tab.id === activeTabId;
-            const isVisibleOnMobile =
-              !shouldLimitMobileTabs || mobileTabSet.has(tab.id);
+          {unpinnedBlocks.map((block) => {
+            if (block.type === "tab") {
+              const tab = block.tab;
+              const isActive = tab.id === activeTabId;
+              const isVisibleOnMobile =
+                !shouldLimitMobileTabs || mobileTabSet.has(tab.id);
+
+              return (
+                <SortableTabItem
+                  key={tab.id}
+                  tab={tab}
+                  isActive={isActive}
+                  isVertical={isVertical}
+                  tabIconTheme={tabIconTheme}
+                  onSelect={() => {
+                    setActiveTab(tab.id);
+                    onTabClick?.();
+                  }}
+                  onClose={handleCloseTab}
+                  onTogglePin={togglePinTab}
+                  onContextMenu={handleContextMenu}
+                  onLongPress={handleLongPress}
+                  className={
+                    shouldLimitMobileTabs && !isVisibleOnMobile
+                      ? "hidden md:flex"
+                      : "flex"
+                  }
+                />
+              );
+            }
+
+            const { group, tabs: groupTabs } = block;
+            const visibleTabs = group.collapsed
+              ? groupTabs.filter((t) => t.id === activeTabId)
+              : groupTabs;
 
             return (
-              <SortableTabItem
-                key={tab.id}
-                tab={tab}
-                isActive={isActive}
-                isVertical={isVertical}
-                tabIconTheme={tabIconTheme}
-                onSelect={() => {
-                  setActiveTab(tab.id);
-                  onTabClick?.();
-                }}
-                onClose={handleCloseTab}
-                onTogglePin={togglePinTab}
-                onContextMenu={handleContextMenu}
-                onLongPress={handleLongPress}
-                className={
-                  shouldLimitMobileTabs && !isVisibleOnMobile
-                    ? "hidden md:flex"
-                    : "flex"
-                }
-              />
+              <React.Fragment key={`group-${group.id}`}>
+                <TabGroupChip
+                  group={group}
+                  tabCount={groupTabs.length}
+                  isVertical={isVertical}
+                  onToggleCollapse={toggleTabGroupCollapse}
+                  onContextMenu={(e, g) =>
+                    setGroupContextMenu({
+                      group: g,
+                      x: e.clientX,
+                      y: e.clientY,
+                    })
+                  }
+                  onLongPress={(g, x, y) =>
+                    setGroupContextMenu({ group: g, x, y })
+                  }
+                />
+                {visibleTabs.map((tab) => {
+                  const isActive = tab.id === activeTabId;
+                  const isVisibleOnMobile =
+                    !shouldLimitMobileTabs || mobileTabSet.has(tab.id);
+
+                  return (
+                    <SortableTabItem
+                      key={tab.id}
+                      tab={tab}
+                      isActive={isActive}
+                      isVertical={isVertical}
+                      tabIconTheme={tabIconTheme}
+                      groupColor={TAB_GROUP_COLOR_MAP[group.color]}
+                      onSelect={() => {
+                        setActiveTab(tab.id);
+                        onTabClick?.();
+                      }}
+                      onClose={handleCloseTab}
+                      onTogglePin={togglePinTab}
+                      onContextMenu={handleContextMenu}
+                      onLongPress={handleLongPress}
+                      className={
+                        shouldLimitMobileTabs && !isVisibleOnMobile
+                          ? "hidden md:flex"
+                          : "flex"
+                      }
+                    />
+                  );
+                })}
+              </React.Fragment>
             );
           })}
         </SortableContext>
@@ -350,6 +466,16 @@ export const TabBar: React.FC<TabBarProps> = ({
             x={contextMenu.x}
             y={contextMenu.y}
             onClose={() => setContextMenu(null)}
+          />
+        )}
+
+        {/* Tab Group Context Menu */}
+        {groupContextMenu && (
+          <TabGroupContextMenu
+            group={groupContextMenu.group}
+            x={groupContextMenu.x}
+            y={groupContextMenu.y}
+            onClose={() => setGroupContextMenu(null)}
           />
         )}
 

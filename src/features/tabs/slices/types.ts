@@ -8,17 +8,34 @@ import type {
   SupportedLanguage,
   RecentFileEntry,
   DroppedFileItem,
+  TabGroup,
+  TabGroupColor,
 } from "../../../core/types/file.types";
 import type { ExternalAlertData } from "../../editor/components/ExternalFileAlertModal";
 import type { SupportedEncoding } from "../../../core/utils/encodingUtils";
 
 export interface TabsSlice {
   tabs: FileTab[];
+  tabGroups: TabGroup[];
   activeTabId: string | null;
   recentTabIds: string[];
   activeCursorPos: CursorPosition;
 
   createTab: (name?: string, content?: string, lang?: string) => void;
+  createTabGroup: (
+    name: string,
+    color: TabGroupColor,
+    initialTabId?: string,
+  ) => string;
+  assignTabToGroup: (tabId: string, groupId: string | null) => void;
+  updateTabGroup: (
+    groupId: string,
+    patch: Partial<Pick<TabGroup, "name" | "color" | "collapsed">>,
+  ) => void;
+  toggleTabGroupCollapse: (groupId: string) => void;
+  ungroupTabGroup: (groupId: string) => void;
+  closeTabGroup: (groupId: string) => Promise<void>;
+  createTabInGroup: (groupId: string) => void;
   closeTab: (id: string) => void;
   closeOtherTabs: (id: string) => Promise<void>;
   closeToRightTabs: (id: string) => Promise<void>;

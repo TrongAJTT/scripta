@@ -69,6 +69,14 @@ export const createSettingsViewSlice: EditorSliceCreator<SettingsViewSlice> = (
         ...t,
         isModified: t.content !== t.savedContent,
       }));
+      const activeGroupIds = new Set(
+        restoredTabs
+          .map((t) => t.groupId)
+          .filter((id): id is string => Boolean(id)),
+      );
+      const restoredGroups = (saved.tabGroups || []).filter((g) =>
+        activeGroupIds.has(g.id),
+      );
       const restoredActiveId =
         saved.activeTabId &&
         restoredTabs.some((x) => x.id === saved.activeTabId)
@@ -77,6 +85,7 @@ export const createSettingsViewSlice: EditorSliceCreator<SettingsViewSlice> = (
       const targetTab = restoredTabs.find((x) => x.id === restoredActiveId);
       set({
         tabs: restoredTabs,
+        tabGroups: restoredGroups,
         activeTabId: restoredActiveId,
         recentTabIds: [restoredActiveId],
         activeCursorPos: targetTab?.cursorPos || {

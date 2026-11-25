@@ -1,4 +1,8 @@
-import type { EditorSettings, FileTab } from "../../../core/types/file.types";
+import type {
+  EditorSettings,
+  FileTab,
+  TabGroup,
+} from "../../../core/types/file.types";
 import { WELCOME_MD_CONTENT } from "../../../core/data/defaultDocuments";
 import { saveSessionTabs, saveSettings } from "../../../core/utils/idbStorage";
 import { useWorkspaceStore } from "../../workspace/store/workspaceStore";
@@ -61,10 +65,11 @@ export function cancelPendingSessionSave(): void {
 export function debouncedSaveSession(
   tabs: FileTab[],
   activeTabId: string | null,
+  tabGroups?: TabGroup[],
 ): void {
   if (saveSessionTimeout) clearTimeout(saveSessionTimeout);
   saveSessionTimeout = setTimeout(() => {
-    void saveSessionTabs(tabs, activeTabId);
+    void saveSessionTabs(tabs, activeTabId, tabGroups);
     void useWorkspaceStore.getState().saveCurrentWorkspaceState();
   }, 1000);
 }

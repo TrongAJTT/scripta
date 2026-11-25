@@ -19,6 +19,7 @@ export interface SortableTabItemProps {
   onTogglePin: (tabId: string) => void;
   onContextMenu: (e: React.MouseEvent, tab: FileTab) => void;
   onLongPress: (tab: FileTab, x: number, y: number) => void;
+  groupColor?: string;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export const SortableTabItem: React.FC<SortableTabItemProps> = ({
   onTogglePin,
   onContextMenu,
   onLongPress,
+  groupColor,
   className = "",
 }) => {
   const {
@@ -234,6 +236,19 @@ export const SortableTabItem: React.FC<SortableTabItemProps> = ({
             <X className="w-3 h-3" />
           </button>
         </div>
+      )}
+
+      {/* Group Accent Strip */}
+      {groupColor && (
+        <span
+          aria-hidden="true"
+          style={{ backgroundColor: groupColor }}
+          className={
+            isVertical
+              ? "absolute right-0 top-1 bottom-1 w-0.5 rounded-full"
+              : "absolute bottom-0 left-1 right-1 h-0.5 rounded-full"
+          }
+        />
       )}
     </div>
   );

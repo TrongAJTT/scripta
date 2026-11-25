@@ -2,6 +2,7 @@ import type {
   CursorPosition,
   FileTab,
   SupportedLanguage,
+  TabGroup,
 } from "../../../core/types/file.types";
 import {
   detectLanguageFromFilename,
@@ -23,8 +24,19 @@ import { dialog, type ConfirmResult } from "../../../shared/dialog/dialogStore";
 import { createInitialTab, debouncedSaveSession } from "./sessionHelpers";
 import type { EditorSliceCreator, TabsSlice } from "./types";
 
+function pruneEmptyTabGroups(
+  tabs: FileTab[],
+  tabGroups: TabGroup[],
+): TabGroup[] {
+  const activeGroupIds = new Set(
+    tabs.map((t) => t.groupId).filter((id): id is string => Boolean(id)),
+  );
+  return tabGroups.filter((g) => activeGroupIds.has(g.id));
+}
+
 export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
   tabs: [],
+  tabGroups: [],
   activeTabId: null,
   recentTabIds: [],
   activeCursorPos: { line: 1, col: 1, selectedChars: 0 },
@@ -58,7 +70,167 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
       activeTabId: newTab.id,
       recentTabIds: nextRecent,
     });
-    debouncedSaveSession(nextTabs, newTab.id);
+    debouncedSaveSession(nextTabs, newTab.id, get().tabGroups);
+  },
+
+  createTabGroup: (name, color, initialTabId) => {
+    const { tabs, tabGroups, activeTabId } = get();
+    const groupId = crypto.randomUUID();
+    const newGroup: TabGroup = {
+      id: groupId,
+      name: name.trim() || "Group",
+      color,
+      collapsed: false,
+    };
+
+    const nextTabs = initialTabId
+      ? tabs.map((t) =>
+          t.id === initialTabId ? { ...t, isPinned: false, groupId } : t,
+        )
+      : tabs;
+    const nextGroups = [...tabGroups, newGroup];
+    set({ tabs: nextTabs, tabGroups: nextGroups });
+    debouncedSaveSession(nextTabs, activeTabId, nextGroups);
+    return groupId;
+  },
+
+  assignTabToGroup: (tabId, groupId) => {
+    const { tabs, tabGroups, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.id !== tabId) return t;
+      if (groupId === null) {
+        const { groupId: _removed, ...rest } = t;
+        return rest;
+      }
+      return { ...t, isPinned: false, groupId };
+    });
+    const nextGroups = pruneEmptyTabGroups(nextTabs, tabGroups);
+    set({ tabs: nextTabs, tabGroups: nextGroups });
+    debouncedSaveSession(nextTabs, activeTabId, nextGroups);
+  },
+
+  updateTabGroup: (groupId, patch) => {
+    const { tabs, tabGroups, activeTabId } = get();
+    const nextGroups = tabGroups.map((g) =>
+      g.id === groupId ? { ...g, ...patch } : g,
+    );
+    set({ tabGroups: nextGroups });
+    debouncedSaveSession(tabs, activeTabId, nextGroups);
+  },
+
+  toggleTabGroupCollapse: (groupId) => {
+    const { tabs, tabGroups, activeTabId } = get();
+    const nextGroups = tabGroups.map((g) =>
+      g.id === groupId ? { ...g, collapsed: !g.collapsed } : g,
+    );
+    set({ tabGroups: nextGroups });
+    debouncedSaveSession(tabs, activeTabId, nextGroups);
+  },
+
+  ungroupTabGroup: (groupId) => {
+    const { tabs, tabGroups, activeTabId } = get();
+    const nextTabs = tabs.map((t) => {
+      if (t.groupId !== groupId) return t;
+      const { groupId: _removed, ...rest } = t;
+      return rest;
+    });
+    const nextGroups = tabGroups.filter((g) => g.id !== groupId);
+    set({ tabs: nextTabs, tabGroups: nextGroups });
+    debouncedSaveSession(nextTabs, activeTabId, nextGroups);
+  },
+
+  closeTabGroup: async (groupId) => {
+    const { tabs, tabGroups, activeTabId, recentTabIds } = get();
+    const groupTabs = tabs.filter((t) => t.groupId === groupId);
+    if (groupTabs.length === 0) {
+      const nextGroups = tabGroups.filter((g) => g.id !== groupId);
+      set({ tabGroups: nextGroups });
+      debouncedSaveSession(tabs, activeTabId, nextGroups);
+      return;
+    }
+
+    if (groupTabs.some((t) => t.isModified)) {
+      const groupName =
+        tabGroups.find((g) => g.id === groupId)?.name || "this group";
+      const confirmed = await dialog.confirm({
+        title: "Unsaved Changes",
+        message: `Some tabs in "${groupName}" have unsaved changes.\nAre you sure you want to close them without saving?`,
+        confirmText: "Close Without Saving",
+        cancelText: "Cancel",
+        variant: "warning",
+      });
+      if (!confirmed) return;
+    }
+
+    const closingIds = new Set(groupTabs.map((t) => t.id));
+    const nextTabs = tabs.filter((t) => !closingIds.has(t.id));
+    const nextRecent = (recentTabIds || []).filter((id) => !closingIds.has(id));
+    let nextActiveId = activeTabId;
+
+    if (activeTabId && closingIds.has(activeTabId)) {
+      if (
+        nextRecent.length > 0 &&
+        nextTabs.some((t) => t.id === nextRecent[0])
+      ) {
+        nextActiveId = nextRecent[0];
+      } else if (nextTabs.length > 0) {
+        nextActiveId = nextTabs[0].id;
+      } else {
+        const freshTab = createInitialTab("new 1");
+        nextTabs.push(freshTab);
+        nextActiveId = freshTab.id;
+        nextRecent.push(freshTab.id);
+      }
+    }
+
+    const nextGroups = tabGroups.filter((g) => g.id !== groupId);
+    set({
+      tabs: nextTabs,
+      tabGroups: nextGroups,
+      activeTabId: nextActiveId,
+      recentTabIds: nextRecent,
+    });
+    for (const tid of closingIds) {
+      usePreviewSessionStore.getState().clearSession(tid);
+    }
+    debouncedSaveSession(nextTabs, nextActiveId, nextGroups);
+  },
+
+  createTabInGroup: (groupId) => {
+    const { tabs, tabGroups } = get();
+    const tabCount = tabs.length + 1;
+    const tabName = `new ${tabCount}`;
+    const detection = detectLanguageFromFilename(tabName);
+
+    const newTab: FileTab = {
+      id: crypto.randomUUID(),
+      name: tabName,
+      content: "",
+      savedContent: "",
+      language: detection.language,
+      isModified: false,
+      encoding: "UTF-8",
+      lineEnding: "LF",
+      previewType: detection.previewType,
+      cursorPos: { line: 1, col: 1, selectedChars: 0 },
+      groupId,
+    };
+
+    const nextTabs = [...tabs, newTab];
+    const nextGroups = tabGroups.map((g) =>
+      g.id === groupId ? { ...g, collapsed: false } : g,
+    );
+    const nextRecent = [
+      newTab.id,
+      ...(get().recentTabIds || []).filter((id) => id !== newTab.id),
+    ];
+    set({
+      tabs: nextTabs,
+      tabGroups: nextGroups,
+      activeTabId: newTab.id,
+      recentTabIds: nextRecent,
+    });
+    debouncedSaveSession(nextTabs, newTab.id, nextGroups);
   },
 
   closeTab: (id: string) => {
@@ -94,8 +266,10 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
       }
     }
 
+    const nextGroups = pruneEmptyTabGroups(nextTabs, get().tabGroups);
     set((state) => ({
       tabs: nextTabs,
+      tabGroups: nextGroups,
       activeTabId: nextActiveId,
       recentTabIds: nextRecent,
       bypassedPreviewTabIds: state.bypassedPreviewTabIds.filter(
@@ -104,7 +278,7 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
     }));
     // Clean up in-memory preview session (sort, page, filter, mergedView) for the closed tab
     usePreviewSessionStore.getState().clearSession(id);
-    debouncedSaveSession(nextTabs, nextActiveId);
+    debouncedSaveSession(nextTabs, nextActiveId, nextGroups);
   },
 
   renameTab: (id: string, newName: string) => {
@@ -117,16 +291,23 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
   },
 
   togglePinTab: (id: string) => {
-    const { tabs, activeTabId } = get();
-    const updated = tabs.map((t) =>
-      t.id === id ? { ...t, isPinned: !t.isPinned } : t,
-    );
+    const { tabs, tabGroups, activeTabId } = get();
+    const updated = tabs.map((t) => {
+      if (t.id !== id) return t;
+      const nextPinned = !t.isPinned;
+      if (nextPinned) {
+        const { groupId: _removed, ...rest } = t;
+        return { ...rest, isPinned: true };
+      }
+      return { ...t, isPinned: false };
+    });
     // Stable sort: Pinned tabs come first
     const pinned = updated.filter((t) => t.isPinned);
     const unpinned = updated.filter((t) => !t.isPinned);
     const nextTabs = [...pinned, ...unpinned];
-    set({ tabs: nextTabs });
-    debouncedSaveSession(nextTabs, activeTabId);
+    const nextGroups = pruneEmptyTabGroups(nextTabs, tabGroups);
+    set({ tabs: nextTabs, tabGroups: nextGroups });
+    debouncedSaveSession(nextTabs, activeTabId, nextGroups);
   },
 
   toggleLockTab: (id: string) => {
@@ -157,12 +338,18 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
     }
 
     const keep = tabs.filter((t) => t.id === id || t.isPinned);
+    const nextGroups = pruneEmptyTabGroups(keep, get().tabGroups);
     const nextRecent = [
       id,
       ...keep.filter((t) => t.id !== id).map((t) => t.id),
     ];
-    set({ tabs: keep, activeTabId: id, recentTabIds: nextRecent });
-    debouncedSaveSession(keep, id);
+    set({
+      tabs: keep,
+      tabGroups: nextGroups,
+      activeTabId: id,
+      recentTabIds: nextRecent,
+    });
+    debouncedSaveSession(keep, id, nextGroups);
   },
 
   closeToRightTabs: async (id: string) => {
@@ -188,6 +375,7 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
 
     const rightTabIds = new Set(rightTabs.map((t) => t.id));
     const keep = tabs.filter((t) => !rightTabIds.has(t.id));
+    const nextGroups = pruneEmptyTabGroups(keep, get().tabGroups);
     let nextActiveId = activeTabId;
     if (activeTabId && rightTabIds.has(activeTabId)) {
       nextActiveId = id;
@@ -196,8 +384,13 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
     const nextRecent = (get().recentTabIds || []).filter(
       (tid) => !rightTabIds.has(tid),
     );
-    set({ tabs: keep, activeTabId: nextActiveId, recentTabIds: nextRecent });
-    debouncedSaveSession(keep, nextActiveId);
+    set({
+      tabs: keep,
+      tabGroups: nextGroups,
+      activeTabId: nextActiveId,
+      recentTabIds: nextRecent,
+    });
+    debouncedSaveSession(keep, nextActiveId, nextGroups);
   },
 
   closeSavedTabs: () => {
@@ -215,21 +408,28 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
     }
 
     const keepIds = new Set(keep.map((t) => t.id));
+    const nextGroups = pruneEmptyTabGroups(keep, get().tabGroups);
     const nextRecent = (get().recentTabIds || []).filter((tid) =>
       keepIds.has(tid),
     );
-    set({ tabs: keep, activeTabId: nextActiveId, recentTabIds: nextRecent });
-    debouncedSaveSession(keep, nextActiveId);
+    set({
+      tabs: keep,
+      tabGroups: nextGroups,
+      activeTabId: nextActiveId,
+      recentTabIds: nextRecent,
+    });
+    debouncedSaveSession(keep, nextActiveId, nextGroups);
   },
 
   closeAllTabs: () => {
     const freshTab = createInitialTab("new 1");
     set({
       tabs: [freshTab],
+      tabGroups: [],
       activeTabId: freshTab.id,
       recentTabIds: [freshTab.id],
     });
-    debouncedSaveSession([freshTab], freshTab.id);
+    debouncedSaveSession([freshTab], freshTab.id, []);
   },
 
   closeAllTabsWithPrompt: async () => {
@@ -376,7 +576,7 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
   },
 
   reorderTabs: (fromIdx: number, toIdx: number) => {
-    const { tabs, activeTabId } = get();
+    const { tabs, tabGroups, activeTabId } = get();
     if (
       fromIdx < 0 ||
       fromIdx >= tabs.length ||
@@ -397,9 +597,35 @@ export const createTabsSlice: EditorSliceCreator<TabsSlice> = (set, get) => ({
 
     const updated = [...tabs];
     const [moved] = updated.splice(fromIdx, 1);
-    updated.splice(toIdx, 0, moved);
-    set({ tabs: updated });
-    debouncedSaveSession(updated, activeTabId);
+
+    let nextGroupId = moved.groupId;
+    if (!sourceTab.isPinned && sourceTab.groupId !== targetTab.groupId) {
+      if (targetTab.groupId) {
+        // Only add to target group when landing within [group header .. outermost tab]
+        const maxGroupIdx = tabs.reduce(
+          (max, t, idx) => (t.groupId === targetTab.groupId ? idx : max),
+          -1,
+        );
+        const landsPastOutermost = fromIdx < toIdx && toIdx === maxGroupIdx;
+        if (!landsPastOutermost) {
+          nextGroupId = targetTab.groupId;
+        }
+      } else {
+        nextGroupId = undefined;
+      }
+    }
+
+    const updatedMoved =
+      nextGroupId !== undefined
+        ? { ...moved, groupId: nextGroupId }
+        : (() => {
+            const { groupId: _removed, ...rest } = moved;
+            return rest;
+          })();
+    updated.splice(toIdx, 0, updatedMoved);
+    const nextGroups = pruneEmptyTabGroups(updated, tabGroups);
+    set({ tabs: updated, tabGroups: nextGroups });
+    debouncedSaveSession(updated, activeTabId, nextGroups);
   },
 
   setLanguageForActiveTab: (lang: SupportedLanguage) => {
