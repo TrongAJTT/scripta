@@ -5,6 +5,7 @@ export const APP_VERSION = packageJson.version;
 export const APP_TITLE = `${APP_NAME} v${APP_VERSION}`;
 export const APP_REPOSITORY = "https://github.com/TrongAJTT/scripta";
 export const APP_HOMEPAGE = "https://scripta.trongajtt.com";
+export const APP_CHANGELOG_URL = "https://www.trongajtt.com/apps/scripta/changelog";
 
 export const LEGAL_LINKS = {
   TERMS: "https://www.trongajtt.com/apps/scripta/terms",

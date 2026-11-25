@@ -55,6 +55,7 @@ import {
 import {
   APP_NAME,
   APP_TITLE,
+  APP_CHANGELOG_URL,
   LEGAL_LINKS,
 } from "../../core/constants/app";
 import { DonateMenuItems } from "./DonateMenuItems";
@@ -829,6 +830,13 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             icon={<Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />}
             onSelect={onOpenUpdateModal}
           />
+          <DropdownMenu.Item
+            label="View Changelog"
+            icon={<Clock className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
+            onSelect={() =>
+              window.open(APP_CHANGELOG_URL, "_blank", "noopener,noreferrer")
+            }
+          />
           <DropdownMenu.Separator />
           <DropdownMenu.Item
             label="Terms of Service"
@@ -1011,6 +1019,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               label="Check for Updates..."
               icon={<Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />}
               onSelect={onOpenUpdateModal}
+            />
+            <DropdownMenu.Item
+              label="View Changelog"
+              icon={
+                <Clock className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+              }
+              onSelect={() =>
+                window.open(APP_CHANGELOG_URL, "_blank", "noopener,noreferrer")
+              }
             />
             <DropdownMenu.Separator />
             <DropdownMenu.Item
