@@ -12,7 +12,6 @@ import {
   Trash2,
   Layout,
   Check,
-  PencilLine,
   Layers,
   Plus,
   Ungroup,
@@ -24,6 +23,7 @@ import { TAB_BAR_POSITION_OPTIONS } from "../../../core/constants/tabBarPosition
 import { TAB_GROUP_COLOR_MAP } from "../../../core/constants/tabGroups";
 import { ContextMenu } from "../../../shared/components/ContextMenu";
 import { dialog } from "../../../shared/dialog/dialogStore";
+import { RenameTabMenuItem } from "./RenameTabMenuItem";
 
 export interface TabContextMenuProps {
   tab: FileTab;
@@ -40,7 +40,6 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 }) => {
   const togglePinTab = useEditorStore((s) => s.togglePinTab);
   const toggleLockTab = useEditorStore((s) => s.toggleLockTab);
-  const renameTab = useEditorStore((s) => s.renameTab);
   const closeTab = useEditorStore((s) => s.closeTab);
   const closeOtherTabs = useEditorStore((s) => s.closeOtherTabs);
   const closeToRightTabs = useEditorStore((s) => s.closeToRightTabs);
@@ -88,27 +87,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       />
 
       {/* 3. Rename tab */}
-      <ContextMenu.Item
-        label="Rename"
-        icon={<PencilLine className="w-3.5 h-3.5 text-[var(--accent-blue)]" />}
-        onSelect={async () => {
-          const newName = await dialog.prompt({
-            title: "Rename Tab",
-            message: "Enter a new name for the tab",
-            initialValue: tab.name,
-            validate: (value) => {
-              if (value.trim().length === 0) {
-                return "Name cannot be empty";
-              }
-              return null;
-            },
-          });
-          const trimmedName = newName?.trim();
-          if (trimmedName) {
-            renameTab(tab.id, trimmedName);
-          }
-        }}
-      />
+      <RenameTabMenuItem tab={tab} />
 
       {/* 4. Tab Group Submenu */}
       <ContextMenu.Sub

@@ -6,6 +6,7 @@ import { WorkspaceMenuItems } from "../../features/workspace/components/Workspac
 import { WorkspaceFolderSyncMenuItems } from "../../features/workspace/components/WorkspaceFolderSyncMenuItems";
 import { ThemeMenuItems } from "../../features/settings/components/ThemeMenuItems";
 import { BookmarkMenuItems } from "../../features/editor/components/BookmarkMenuItems";
+import { RenameTabMenuItem } from "../../features/tabs/components/RenameTabMenuItem";
 import type { ScriptMetadata } from "../../features/scripts/types/script.types";
 import { DropdownMenu } from "../../shared/components/DropdownMenu";
 import { Z_INDEX } from "../../core/constants/zIndex";
@@ -253,6 +254,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             onSelect={() => toggleLockTab(activeTab.id)}
           />
         )}
+
+        {/* Rename Active File */}
+        {activeTab && <RenameTabMenuItem tab={activeTab} label="Rename..." />}
 
         {/* Move to Workspace Submenu */}
         {activeTab && (

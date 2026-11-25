@@ -61,7 +61,11 @@ export const MermaidAdapter: React.FC<PreviewAdapterProps> = ({
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgWrapperRef = useRef<HTMLDivElement>(null);
-  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(
+    new Map(),
+  );
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
 
   const mermaidTheme = useEditorStore((s) => s.settings.mermaidTheme) ?? "auto";
   const appTheme = useEditorStore((s) => s.settings.theme);
@@ -136,31 +140,92 @@ export const MermaidAdapter: React.FC<PreviewAdapterProps> = ({
     setPan({ x: 0, y: 0 });
   }, [zoom]);
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.15 : -0.15;
-    setZoom((prev) =>
-      Math.max(0.2, Math.min(5, Number((prev + delta).toFixed(2)))),
-    );
-  };
+  // Non-passive wheel listener for smooth mouse-wheel / trackpad zoom
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-  };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      setZoom((prev) =>
+        Math.max(0.2, Math.min(5, Number((prev * factor).toFixed(2)))),
+      );
+    };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isPanning) return;
-    setPan({
-      x: e.clientX - panStartRef.current.x,
-      y: e.clientY - panStartRef.current.y,
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [svgContent, isEmpty]);
+
+  const getPointerDistance = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+  ) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY,
     });
+
+    if (activePointersRef.current.size === 1) {
+      setIsPanning(true);
+      pinchStartDistRef.current = null;
+    } else if (activePointersRef.current.size === 2) {
+      const pts = Array.from(activePointersRef.current.values());
+      pinchStartDistRef.current = getPointerDistance(pts[0], pts[1]);
+      pinchStartZoomRef.current = zoom;
+      setIsPanning(false);
+    }
   };
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const prevPoint = activePointersRef.current.get(e.pointerId);
+    if (!prevPoint) return;
+
+    const nextPoint = { x: e.clientX, y: e.clientY };
+    activePointersRef.current.set(e.pointerId, nextPoint);
+
+    if (activePointersRef.current.size === 1) {
+      const dx = nextPoint.x - prevPoint.x;
+      const dy = nextPoint.y - prevPoint.y;
+      setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+    } else if (
+      activePointersRef.current.size === 2 &&
+      pinchStartDistRef.current &&
+      pinchStartDistRef.current > 0
+    ) {
+      const pts = Array.from(activePointersRef.current.values());
+      const dist = getPointerDistance(pts[0], pts[1]);
+      const nextZoom = Math.max(
+        0.2,
+        Math.min(
+          5,
+          Number(
+            (
+              pinchStartZoomRef.current *
+              (dist / pinchStartDistRef.current)
+            ).toFixed(2),
+          ),
+        ),
+      );
+      setZoom(nextZoom);
+    }
+  };
+
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    activePointersRef.current.delete(e.pointerId);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    if (activePointersRef.current.size < 2) {
+      pinchStartDistRef.current = null;
+    }
+    if (activePointersRef.current.size === 0) {
+      setIsPanning(false);
+    }
   };
 
   // Inject header controls into unified PreviewPanel bar
@@ -207,7 +272,9 @@ export const MermaidAdapter: React.FC<PreviewAdapterProps> = ({
           {copied ? (
             <>
               <Check className="w-3 h-3 text-[var(--accent)]" />
-              <span className="text-[var(--accent)] font-medium">Copied</span>
+              <span className="hidden sm:inline text-[var(--accent)] font-medium">
+                Copied
+              </span>
             </>
           ) : (
             <>
@@ -288,15 +355,14 @@ export const MermaidAdapter: React.FC<PreviewAdapterProps> = ({
       {/* Interactive Pan & Zoom Canvas */}
       <div
         ref={canvasRef}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        className={`flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-canvas-dots select-none ${
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        className={`flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-canvas-dots select-none touch-none ${
           isPanning ? "cursor-grabbing" : "cursor-grab"
         }`}
-        title="Drag to pan • Ctrl + Scroll to zoom"
+        title="Drag to pan • Scroll or Pinch to zoom"
       >
         <div
           ref={svgWrapperRef}
